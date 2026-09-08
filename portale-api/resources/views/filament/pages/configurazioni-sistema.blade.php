@@ -15,6 +15,10 @@
                 Test Shopify
             </x-filament::button>
 
+            <x-filament::button color="gray" wire:click="testErp" icon="heroicon-o-signal">
+                Test ERP
+            </x-filament::button>
+
             <x-filament::button color="info" wire:click="sincronizzaProdotti" icon="heroicon-o-arrow-path">
                 Sincronizza Prodotti e Giacenze
             </x-filament::button>

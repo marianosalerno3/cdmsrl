@@ -11,5 +11,5 @@ class Colore extends Model
 
     protected $table = 'colori';
 
-    protected $fillable = ['nome', 'hex'];
+    protected $fillable = ['nome', 'codice', 'hex'];
 }

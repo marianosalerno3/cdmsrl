@@ -29,6 +29,9 @@ class TagliaResource extends Resource
         return $form->schema([
             Forms\Components\TextInput::make('nome')
                 ->required()->maxLength(255)->unique(ignoreRecord: true),
+            Forms\Components\TextInput::make('codice')
+                ->maxLength(6)->label('Codice WinMino')
+                ->helperText('Codice taglia ERP — usato nelle varianti degli ordini inviati a WinMino.'),
             Forms\Components\TextInput::make('ordine')->numeric()->default(0),
         ]);
     }
@@ -38,6 +41,7 @@ class TagliaResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nome')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('codice')->label('Cod. WinMino')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('ordine')->sortable(),
             ])
             ->defaultSort('ordine')

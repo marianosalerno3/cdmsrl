@@ -24,6 +24,7 @@ class Cliente extends Model
         'stato_richiesta', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
         'tipo_listino', 'attivo', 'contrassegno_abilitato',
         'indirizzo', 'cap', 'citta', 'provincia', 'nazione',
+        'criterio_sconto', 'zona', 'nazione_erp', 'tipologia_fe', 'tipologia_codice_fe',
         'documenti', 'sincronizzato_erp_at',
     ];
 
@@ -48,6 +49,11 @@ class Cliente extends Model
     public function ordini(): HasMany
     {
         return $this->hasMany(OrdineB2B::class);
+    }
+
+    public function destinazioni(): HasMany
+    {
+        return $this->hasMany(Destinazione::class);
     }
 
     public function getDenominazioneAttribute(): string

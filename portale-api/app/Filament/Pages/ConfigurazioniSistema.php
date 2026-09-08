@@ -45,7 +45,8 @@ class ConfigurazioniSistema extends Page implements HasForms
             'stripe_webhook_secret' => $s->stripe_webhook_secret,
             'erp_driver' => $s->erp_driver,
             'erp_base_url' => $s->erp_base_url,
-            'erp_api_key' => $s->erp_api_key,
+            'erp_username' => $s->erp_username,
+            'erp_password' => $s->erp_password,
             'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
         ]);
     }
@@ -81,13 +82,17 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('stripe_webhook_secret')->label('Webhook Secret')->password()->revealable(),
                     ]),
 
-                Section::make('ERP')
-                    ->columns(3)
+                Section::make('ERP (WinMino)')
+                    ->description('Webservice DataSnap. Vedi docs/winmino-integration.md.')
+                    ->columns(2)
                     ->schema([
-                        TextInput::make('erp_driver')->label('Driver')
-                            ->helperText('null | winmino | ...'),
-                        TextInput::make('erp_base_url')->label('Base URL')->url(),
-                        TextInput::make('erp_api_key')->label('API Key')->password()->revealable(),
+                        \Filament\Forms\Components\Select::make('erp_driver')->label('Driver')
+                            ->options(['null' => 'Nessuno', 'winmino' => 'WinMino'])
+                            ->default('null'),
+                        TextInput::make('erp_base_url')->label('Base URL')
+                            ->helperText('es. http://1.2.3.4:8080 — senza slash finale'),
+                        TextInput::make('erp_username')->label('Username'),
+                        TextInput::make('erp_password')->label('Password')->password()->revealable(),
                     ]),
 
                 Section::make('Impostazioni Generali')
@@ -147,6 +152,21 @@ class ConfigurazioniSistema extends Page implements HasForms
                 : Notification::make()->danger()->title('Shopify: errore '.$resp->status())->send();
         } catch (\Throwable $e) {
             Notification::make()->danger()->title('Shopify: '.$e->getMessage())->send();
+        }
+    }
+
+    public function testErp(): void
+    {
+        // salva prima, così ErpManager legge i valori correnti
+        $this->salva();
+
+        try {
+            $ok = app(\App\Services\Erp\ErpManager::class)->driver()->test();
+            $ok
+                ? Notification::make()->success()->title('ERP: connessione OK')->send()
+                : Notification::make()->danger()->title('ERP: connessione fallita')->body('Verifica base URL, credenziali e raggiungibilità del server.')->send();
+        } catch (\Throwable $e) {
+            Notification::make()->danger()->title('ERP: '.$e->getMessage())->send();
         }
     }
 

@@ -11,5 +11,5 @@ class Taglia extends Model
 
     protected $table = 'taglie';
 
-    protected $fillable = ['nome', 'ordine'];
+    protected $fillable = ['nome', 'codice', 'ordine'];
 }

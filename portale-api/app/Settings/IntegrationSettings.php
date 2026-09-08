@@ -25,9 +25,11 @@ class IntegrationSettings extends Settings
     public ?string $stripe_webhook_secret = null;
 
     // ERP (WinMino o equivalente)
-    public ?string $erp_driver = 'null';
-    public ?string $erp_base_url = null;
-    public ?string $erp_api_key = null;
+    public ?string $erp_driver = 'null';        // 'null' | 'winmino'
+    public ?string $erp_base_url = null;        // es. http://1.2.3.4:8080
+    public ?string $erp_username = null;
+    public ?string $erp_password = null;
+    public ?string $erp_api_key = null;         // deprecato: WinMino usa username/password
 
     // Generali
     public bool $sync_giacenze_automatica = false;
@@ -44,6 +46,7 @@ class IntegrationSettings extends Settings
             'shopify_access_token',
             'stripe_secret',
             'stripe_webhook_secret',
+            'erp_password',
             'erp_api_key',
         ];
     }

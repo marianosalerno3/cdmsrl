@@ -26,7 +26,7 @@ class OrdineB2B extends Model
         'subtotale', 'spese_spedizione', 'iva_perc', 'iva_importo', 'totale', 'totale_pezzi',
         'note_agente', 'programmato', 'data_ordine',
         'stripe_session_id', 'stripe_payment_intent', 'pagato_at',
-        'email_conferma_inviata_at', 'inviato_erp_at',
+        'email_conferma_inviata_at', 'inviato_erp_at', 'idesterno', 'erp_response',
         'shopify_order_id', 'woocommerce_order_id', 'wordpress_payload',
     ];
 
@@ -47,6 +47,7 @@ class OrdineB2B extends Model
             'email_conferma_inviata_at' => 'datetime',
             'inviato_erp_at' => 'datetime',
             'wordpress_payload' => 'array',
+            'erp_response' => 'array',
         ];
     }
 
@@ -55,6 +56,7 @@ class OrdineB2B extends Model
         static::creating(function (self $ordine) {
             $ordine->numero ??= self::generaNumero();
             $ordine->data_ordine ??= now()->toDateString();
+            $ordine->idesterno ??= $ordine->numero;
         });
     }
 

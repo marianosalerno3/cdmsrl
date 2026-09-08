@@ -29,6 +29,9 @@ class ColoreResource extends Resource
         return $form->schema([
             Forms\Components\TextInput::make('nome')
                 ->required()->maxLength(255)->unique(ignoreRecord: true),
+            Forms\Components\TextInput::make('codice')
+                ->maxLength(20)->label('Codice WinMino')
+                ->helperText('Codice colore ERP — usato nelle varianti degli ordini inviati a WinMino.'),
             Forms\Components\ColorPicker::make('hex')->label('Anteprima (hex)'),
         ]);
     }
@@ -39,6 +42,7 @@ class ColoreResource extends Resource
             ->columns([
                 Tables\Columns\ColorColumn::make('hex')->label(''),
                 Tables\Columns\TextColumn::make('nome')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('codice')->label('Cod. WinMino')->searchable()->toggleable(),
             ])
             ->defaultSort('nome')
             ->searchable()
