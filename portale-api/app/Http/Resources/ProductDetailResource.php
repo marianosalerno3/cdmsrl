@@ -11,7 +11,7 @@ class ProductDetailResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $listino = ListinoTipo::tryFrom((string) $this->additional['listino'] ?? '')
+        $listino = ListinoTipo::tryFrom((string) $request->input('__listino'))
             ?? $request->user()?->listino_default
             ?? ListinoTipo::Standard;
 

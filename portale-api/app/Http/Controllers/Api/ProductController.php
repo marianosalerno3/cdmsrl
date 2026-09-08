@@ -16,6 +16,7 @@ class ProductController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $listino = $this->listino($request);
+        $request->merge(['__listino' => $listino->value]); // letto dalle Resource
 
         $prodotti = Prodotto::query()
             ->where('attivo', true)
@@ -34,18 +35,21 @@ class ProductController extends Controller
             ->withQueryString();
 
         return ProductResource::collection($prodotti)
-            ->additional(['meta' => ['listino' => $listino->value]]);
+            ->additional(['listino' => $listino->value]);
     }
 
     public function show(Request $request, Prodotto $prodotto): ProductDetailResource
     {
+        $listino = $this->listino($request);
+        $request->merge(['__listino' => $listino->value]);
+
         $prodotto->load([
             'categoria', 'stagione', 'genere', 'immagini',
             'varianti.taglia', 'varianti.colore', 'varianti.immagini',
         ]);
 
         return (new ProductDetailResource($prodotto))
-            ->additional(['listino' => $this->listino($request)->value]);
+            ->additional(['listino' => $listino->value]);
     }
 
     private function listino(Request $request): ListinoTipo
