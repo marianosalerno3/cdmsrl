@@ -97,11 +97,25 @@ resources/views/pdf/     template PDF ordine
 - `spese_spedizione` e `importo_minimo_ordine` da `app_config` (pannello).
 - Carrello vincolato al cliente selezionato (enforce lato SPA + validazione ordine).
 
+## Pannello admin (`/access`)
+
+| Gruppo | Risorse / pagine |
+|---|---|
+| Catalogo | Upload Massivo Immagini · Prodotti (read-first, WinMino master) · Dizionario Prodotti |
+| Vendite | Agenti · Clienti (+ approvazione, export CSV) · Sostituzioni (workflow stato) |
+| Ordini | Ordini B2B (tab Tutti/B2B/Shopify, azioni Stato/PDF/Mail/WinMino) |
+| Attributi Prodotto | Categorie · Colori · Generi · Taglie |
+| Configurazione | Stagioni |
+| Sistema | Configurazioni (WooCommerce/Shopify/Stripe/ERP + test + sync) |
+
+Dashboard: filtri Stagione / Data Inizio / Data Fine + widget *Statistiche
+principali* (ordini, fatturato, provvigioni, stato Shopify), *Ordini per Stato*,
+*Fatturato netto per Stagione*, *Ordini per Stagione*.
+
 ## TODO — prossimi pezzi
-1. **Filament Resources** (Prodotto con repeater varianti, OrdineB2B con azioni
-   Cambia Stato / PDF / Invia Mail / Invia a ERP, Cliente, Agente, tassonomie),
-   pagina `ConfigurazioniSistema`, widget dashboard (StatsOverview + 3 chart).
-2. **Integrazioni**: `ExternalChannel` + `ShopifyChannel` / `WooCommerceChannel` /
-   `ErpChannel`, job in coda, comandi `sync:giacenze` e `sync:clienti`.
-3. **Mail**: `OrdineConfermatoMail` + template.
-4. **Frontend** `portale-web/` (Vue 3 + Vite + Tailwind v4).
+1. **Integrazioni**: `ChannelManager` + `ShopifyChannel` / `WooCommerceChannel`,
+   `ErpManager` (driver WinMino), job in coda; completare gli stub
+   `SyncProdottoEcommerce`, `InviaOrdineErp`, comandi `sync:giacenze` /
+   `sync:clienti`.
+2. **Frontend** `portale-web/` (Vue 3 + Vite + Tailwind v4).
+3. **Infra**: Caddy + docker-compose + checklist go-live.

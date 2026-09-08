@@ -33,9 +33,16 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 
 - [x] **Backend — fondamenta**: schema DB, model, enum, API SPA (auth Sanctum,
       catalogo, ordini, PDF, Stripe, sostituzioni), pannello Filament base, seeder
-- [ ] Backend — Filament Resources + pagina Configurazioni + widget dashboard
-- [ ] Backend — integrazioni (Shopify / WooCommerce / ERP) + job + comandi sync
+- [x] **Backend — pannello Filament**: risorse (anagrafiche, attributi, Prodotto
+      read-first, Ordini B2B, Sostituzioni), pagina Configurazioni Sistema,
+      Dashboard con filtri + 4 widget (statistiche, ordini per stato,
+      fatturato/ordini per stagione), upload massivo immagini
+- [ ] Backend — integrazioni (Shopify / WooCommerce / ERP WinMino) + job + comandi sync
 - [ ] Frontend `portale-web/`
 - [ ] Infra / deploy
+
+> **Prodotto**: la fonte è WinMino (ERP). Nel pannello codice/testi/varianti/
+> prezzi/giacenze sono sola lettura; si gestiscono solo immagini e flag di
+> pubblicazione. Import ERP = pezzo integrazioni.
 
 Dettagli e setup: [`portale-api/README.md`](portale-api/README.md).
