@@ -75,7 +75,8 @@ class OrdineB2B extends Model
 
     public function righe(): HasMany
     {
-        return $this->hasMany(OrdineRiga::class);
+        // FK esplicita: lo snake_case di "OrdineB2B" darebbe "ordine_b2_b_id".
+        return $this->hasMany(OrdineRiga::class, 'ordine_b2b_id');
     }
 
     public function scopeB2b($query)

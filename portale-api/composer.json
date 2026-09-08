@@ -64,6 +64,12 @@
             "php-http/discovery": true
         }
     },
+    "//": "policy.advisories.block disabilitato per sviluppo locale con toolchain datata: Composer futuro segnala advisory su tutta la linea Laravel 11. In produzione tenere il blocco attivo e aggiornare framework.",
+    "policy": {
+        "advisories": {
+            "block": false
+        }
+    },
     "minimum-stability": "stable",
     "prefer-stable": true
 }

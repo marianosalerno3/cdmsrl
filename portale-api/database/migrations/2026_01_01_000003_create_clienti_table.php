@@ -27,7 +27,7 @@ return new class extends Migration
             $table->string('codice_sdi')->nullable();
             $table->string('pec')->nullable();
 
-            $table->string('tipo_listino')->default('standard');         // override del listino agente
+            $table->string('tipo_listino')->nullable();                  // override del listino agente (null = usa quello dell'agente)
             $table->boolean('attivo')->default(true);
             $table->boolean('contrassegno_abilitato')->default(false);   // "Contrassegno" flag
 
