@@ -41,6 +41,7 @@ class AccessPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Catalogo'),
                 NavigationGroup::make('Vendite'),
+                NavigationGroup::make('Ordini'),
                 NavigationGroup::make('Attributi Prodotto')->collapsed(),
                 NavigationGroup::make('Configurazione')->collapsed(),
                 NavigationGroup::make('Sincronizzazione')->collapsed(),
