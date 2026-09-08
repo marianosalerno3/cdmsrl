@@ -52,7 +52,7 @@ class VarianteProdottoResource extends Resource
                     ->relationship('prodotto', 'codice')->searchable(),
                 Tables\Filters\Filter::make('esaurite')
                     ->label('Solo esaurite')
-                    ->query(fn ($q) => $q->where('quantita', '<=', 0)),
+                    ->query(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('quantita', '<=', 0)),
             ])
             ->defaultSort('sku')
             ->actions([

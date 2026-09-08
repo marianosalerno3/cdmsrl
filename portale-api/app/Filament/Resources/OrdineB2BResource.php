@@ -106,7 +106,7 @@ class OrdineB2BResource extends Resource
                         Forms\Components\DatePicker::make('da'),
                         Forms\Components\DatePicker::make('a'),
                     ])
-                    ->query(fn ($q, array $data) => $q
+                    ->query(fn (\Illuminate\Database\Eloquent\Builder $query, array $data) => $query
                         ->when($data['da'] ?? null, fn ($q, $d) => $q->whereDate('data_ordine', '>=', $d))
                         ->when($data['a'] ?? null, fn ($q, $d) => $q->whereDate('data_ordine', '<=', $d))),
             ])

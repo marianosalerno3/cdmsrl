@@ -123,7 +123,7 @@ class ProdottoResource extends Resource
                 Tables\Filters\TernaryFilter::make('attivo')->label('Pubblicato'),
                 Tables\Filters\Filter::make('senza_immagini')
                     ->label('Senza immagini')
-                    ->query(fn ($q) => $q->doesntHave('immagini')),
+                    ->query(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->doesntHave('immagini')),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Immagini / Portale'),
