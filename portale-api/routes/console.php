@@ -2,8 +2,11 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-// Sync giacenze verso e-commerce (se abilitato nei settings).
+// Push giacenze verso i canali e-commerce abilitati.
 Schedule::command('sync:giacenze')->everyThirtyMinutes()->withoutOverlapping();
 
-// Import anagrafica clienti da ERP.
+// Import ordini dai canali e-commerce.
+Schedule::command('orders:pull-ecommerce')->everyFifteenMinutes()->withoutOverlapping();
+
+// Import anagrafica prodotti/clienti da ERP (WinMino).
 Schedule::command('sync:clienti')->dailyAt('03:00');

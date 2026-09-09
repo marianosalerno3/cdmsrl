@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Prodotto;
+use App\Services\Channels\ChannelManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,10 +11,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Push di un prodotto (+ varianti + immagini + giacenze) verso un canale e-commerce.
+ * Push di un prodotto verso i canali e-commerce.
  *
- * STUB — l'implementazione reale arriva nel pezzo 2c (integrazioni):
- *   App\Services\Channels\ShopifyChannel / WooCommerceChannel.
+ * mode:
+ *   'full'      → pushProduct (anagrafica + varianti + immagini + giacenze)
+ *   'inventory' → pushInventory (solo giacenze, più rapido)
+ *
+ * channel: null = tutti i canali abilitati; oppure 'shopify' | 'woocommerce'.
  */
 class SyncProdottoEcommerce implements ShouldQueue
 {
@@ -22,23 +26,40 @@ class SyncProdottoEcommerce implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries = 3;
+
+    public int $backoff = 20;
+
     public function __construct(
         public string $prodottoId,
-        public string $channel, // 'shopify' | 'woocommerce'
+        public ?string $channel = null,
+        public string $mode = 'full',
     ) {}
 
-    public function handle(): void
+    public function handle(ChannelManager $manager): void
     {
-        $prodotto = Prodotto::with('varianti', 'immagini')->find($this->prodottoId);
+        $prodotto = Prodotto::with('varianti.taglia', 'varianti.colore', 'immagini', 'categoria', 'stagione', 'genere')
+            ->find($this->prodottoId);
 
         if (! $prodotto) {
             return;
         }
 
-        // TODO (2c): app(ChannelManager::class)->driver($this->channel)->pushProduct($prodotto);
-        logger()->info('SyncProdottoEcommerce (stub)', [
-            'prodotto' => $prodotto->codice,
-            'channel' => $this->channel,
-        ]);
+        $channels = $this->channel
+            ? collect([$manager->driver($this->channel)])->filter(fn ($c) => $manager->isEnabled($c->name()))
+            : $manager->enabled();
+
+        foreach ($channels as $channel) {
+            $result = $this->mode === 'inventory'
+                ? $channel->pushInventory($prodotto)
+                : $channel->pushProduct($prodotto);
+
+            logger()->{$result->success ? 'info' : 'warning'}('SyncProdottoEcommerce', [
+                'prodotto' => $prodotto->codice,
+                'channel' => $channel->name(),
+                'mode' => $this->mode,
+                'result' => $result->message,
+            ]);
+        }
     }
 }
