@@ -6,7 +6,6 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Resources\OrdineB2BResource\Pages;
 use App\Filament\Resources\OrdineB2BResource\RelationManagers\RigheRelationManager;
-use App\Jobs\InviaOrdineErp;
 use App\Mail\OrdineConfermaMail;
 use App\Models\OrdineB2B;
 use App\Services\OrderDocumentService;
@@ -92,8 +91,6 @@ class OrdineB2BResource extends Resource
                 Tables\Columns\TextColumn::make('metodo_pagamento')->label('Pagamento')->badge()->toggleable(),
                 Tables\Columns\IconColumn::make('pagato_at')->label('Pagato')->boolean()
                     ->state(fn (OrdineB2B $r) => $r->pagato_at !== null)->toggleable(),
-                Tables\Columns\IconColumn::make('inviato_erp_at')->label('ERP')->boolean()
-                    ->state(fn (OrdineB2B $r) => $r->inviato_erp_at !== null)->toggleable(),
                 Tables\Columns\TextColumn::make('data_ordine')->label('Data Ordine')->date('d/m/Y H:i')->sortable(),
             ])
             ->defaultSort('data_ordine', 'desc')
@@ -146,19 +143,12 @@ class OrdineB2BResource extends Resource
                         Notification::make()->success()->title('Email di conferma in coda')->send();
                     }),
 
-                Tables\Actions\Action::make('invia_erp')
-                    ->label('Invia a WinMino')->icon('heroicon-o-paper-airplane')
-                    ->requiresConfirmation()
-                    ->action(function (OrdineB2B $r) {
-                        InviaOrdineErp::dispatch($r->id);
-                        Notification::make()->success()->title('Invio a WinMino in coda')->send();
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('invia_erp')
-                        ->label('Invia a WinMino')->icon('heroicon-o-paper-airplane')
-                        ->action(fn ($records) => $records->each(fn ($r) => InviaOrdineErp::dispatch($r->id))),
+                    Tables\Actions\BulkAction::make('segna_lavorazione')
+                        ->label('Segna "In lavorazione"')->icon('heroicon-o-cog-6-tooth')
+                        ->action(fn ($records) => $records->each->update(['stato' => \App\Enums\OrderStatus::InLavorazione])),
                 ]),
             ]);
     }

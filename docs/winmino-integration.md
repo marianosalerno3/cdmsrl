@@ -2,7 +2,20 @@
 
 Fonte: Magis Soluzioni Informatiche — 4 documenti in [`docs/winmino/`](winmino/).
 WinMino è il **master** di prodotti, varianti, prezzi, giacenze, clienti, agenti,
-stagioni, categorie. Il portale **legge** (GET) e **scrive** ordini + clienti (POST).
+stagioni, categorie.
+
+## Perimetro (rev. 2026-09-09)
+
+Il flusso principale è **read-only**: `WinMino → portale → Shopify B2C`.
+
+- **Import** (GET): prodotti, varianti, prezzi, giacenze, clienti, agenti →
+  comando `sync:prodotti` (+ `sync:clienti`). Vedi `SyncProdotti` / `SyncClienti`.
+- **Ordini**: **restano nel portale**. A ogni nuovo ordine parte una mail al
+  backoffice CDM (`BACKOFFICE_EMAIL`, `NuovoOrdineBackofficeMail`); il commerciale
+  lo carica manualmente su WinMino. **Nessun push automatico.**
+- Il lato **scrittura** (`AddCliente` / `AddDestinazione` / `AddOrdineCliente`)
+  è **implementato nel driver ma non collegato** — pronto se in futuro si vuole
+  automatizzare.
 
 ## Protocollo
 
@@ -182,8 +195,9 @@ Salviamo l'intera risposta in `ordini_b2b.erp_response` (json) e, su `SUCCESSO`,
 ## Stato implementazione
 
 - [x] `ErpManager` + contratto `ErpDriver` + `NullErpDriver`
-- [x] `WinMinoDriver`: **POST completi** (`AddCliente`, `AddDestinazione`, `AddOrdineCliente`) con builder payload, parser `result`, gestione codici errore
-- [x] `DataSnapClient` (HTTP, auth, URL) + `MetaDecoder` (`{meta,data}` → righe associative)
-- [x] GET: firme pronte, decoder generico; mappatura campi **da completare** con i `meta` reali (punto 1)
+- [x] `DataSnapClient` (HTTP Basic, URL, retry) + `MetaDecoder` (`{meta,data}` → righe associative)
+- [x] `WinMinoDriver` — **GET** (18 funzioni, decoder generico) + **POST** (`AddCliente` / `AddDestinazione` / `AddOrdineCliente`, builder payload, parser `result` / codici −1..−7). Le POST **non sono collegate a nessun flusso** (vedi Perimetro).
+- [x] `SyncProdotti` (`sync:prodotti`), `SyncClienti` (`sync:clienti`) — mappatura campi `pick(...)` **da confermare con i `meta` reali** (punto 1)
 - [x] tabella `destinazioni` + model, campi ERP su schema, config `winmino.php`
-- [x] job `InviaOrdineErp`, comando `sync:clienti` (upsert quando i GET saranno attivi)
+- [x] notifica ordine al backoffice CDM (`NuovoOrdineBackofficeMail`, `BACKOFFICE_EMAIL`)
+- [ ] finalizzare la mappatura GET con risposte reali; codici listino/pagamento/UM di CDM

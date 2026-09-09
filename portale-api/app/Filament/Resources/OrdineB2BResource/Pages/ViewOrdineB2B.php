@@ -43,7 +43,6 @@ class ViewOrdineB2B extends ViewRecord
                 TextEntry::make('agente.nome')->label('Agente'),
                 TextEntry::make('listino_applicato')->label('Listino'),
                 TextEntry::make('email_conferma_inviata_at')->label('Email conferma')->dateTime('d/m/Y H:i')->placeholder('non inviata'),
-                TextEntry::make('inviato_erp_at')->label('Inviato a WinMino')->dateTime('d/m/Y H:i')->placeholder('no'),
             ]),
             Section::make('Cliente')->columns(2)->schema([
                 TextEntry::make('cliente_nome'),

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
+use App\Mail\NuovoOrdineBackofficeMail;
 use App\Models\Cliente;
 use App\Models\OrdineB2B;
 use App\Models\VarianteProdotto;
@@ -15,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -81,6 +83,11 @@ class OrderController extends Controller
 
             return $ordine;
         });
+
+        // notifica il backoffice CDM (il commerciale carica l'ordine su WinMino)
+        if ($destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))))) {
+            Mail::to($destinatari)->queue(new NuovoOrdineBackofficeMail($ordine));
+        }
 
         return response()->json([
             'message' => 'Ordine inviato con successo!',

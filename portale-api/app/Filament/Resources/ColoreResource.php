@@ -31,7 +31,7 @@ class ColoreResource extends Resource
                 ->required()->maxLength(255)->unique(ignoreRecord: true),
             Forms\Components\TextInput::make('codice')
                 ->maxLength(20)->label('Codice WinMino')
-                ->helperText('Codice colore ERP — usato nelle varianti degli ordini inviati a WinMino.'),
+                ->helperText('Codice colore importato da WinMino (riferimento anagrafico).'),
             Forms\Components\ColorPicker::make('hex')->label('Anteprima (hex)'),
         ]);
     }

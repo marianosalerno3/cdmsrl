@@ -31,7 +31,7 @@ class TagliaResource extends Resource
                 ->required()->maxLength(255)->unique(ignoreRecord: true),
             Forms\Components\TextInput::make('codice')
                 ->maxLength(6)->label('Codice WinMino')
-                ->helperText('Codice taglia ERP — usato nelle varianti degli ordini inviati a WinMino.'),
+                ->helperText('Codice taglia importato da WinMino (riferimento anagrafico).'),
             Forms\Components\TextInput::make('ordine')->numeric()->default(0),
         ]);
     }

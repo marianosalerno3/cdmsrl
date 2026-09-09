@@ -14,4 +14,9 @@ return [
 
     // Path del pannello admin Filament.
     'admin_path' => env('FILAMENT_PATH', 'access'),
+
+    // Indirizzo backoffice CDM: riceve la notifica a ogni nuovo ordine dal portale
+    // (il commerciale lo prende in carico e lo carica manualmente su WinMino).
+    // Più indirizzi separati da virgola.
+    'backoffice_email' => env('BACKOFFICE_EMAIL', ''),
 ];
