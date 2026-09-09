@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Registro dei canali e-commerce attivi (in base ai settings del pannello).
+ * Per CDM il canale B2C è Shopify; il B2B è il portale stesso.
  *
  *   app(ChannelManager::class)->driver('shopify')->pushProduct($p);
  *   app(ChannelManager::class)->enabled()->each(fn ($c) => $c->pushInventory($p));
@@ -23,7 +24,6 @@ class ChannelManager
     {
         return $this->resolved[$name] ??= match ($name) {
             'shopify' => new ShopifyChannel($this->settings),
-            'woocommerce' => new WooCommerceChannel($this->settings),
             default => throw new \InvalidArgumentException("Canale sconosciuto: {$name}"),
         };
     }
@@ -32,9 +32,6 @@ class ChannelManager
     {
         return match ($name) {
             'shopify' => filled($this->settings->shopify_shop_domain) && filled($this->settings->shopify_access_token),
-            'woocommerce' => filled($this->settings->woocommerce_url)
-                && filled($this->settings->woocommerce_consumer_key)
-                && filled($this->settings->woocommerce_consumer_secret),
             default => false,
         };
     }
@@ -42,7 +39,7 @@ class ChannelManager
     /** @return Collection<int,EcommerceChannel> */
     public function enabled(): Collection
     {
-        return collect(['shopify', 'woocommerce'])
+        return collect(['shopify'])
             ->filter(fn ($n) => $this->isEnabled($n))
             ->map(fn ($n) => $this->driver($n))
             ->values();

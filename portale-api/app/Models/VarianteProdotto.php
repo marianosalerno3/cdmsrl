@@ -16,7 +16,7 @@ class VarianteProdotto extends Model
 
     protected $fillable = [
         'prodotto_id', 'taglia_id', 'colore_id', 'sku', 'prezzo', 'quantita',
-        'barcode', 'shopify_variant_id', 'woocommerce_variation_id',
+        'barcode', 'shopify_variant_id',
     ];
 
     protected function casts(): array

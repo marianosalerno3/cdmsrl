@@ -19,12 +19,6 @@ return [
         'api_version' => env('SHOPIFY_API_VERSION', '2025-01'),
     ],
 
-    'woocommerce' => [
-        'url' => env('WOOCOMMERCE_URL'),
-        'consumer_key' => env('WOOCOMMERCE_CONSUMER_KEY'),
-        'consumer_secret' => env('WOOCOMMERCE_CONSUMER_SECRET'),
-    ],
-
     'erp' => [
         // 'null' | 'winmino' | ... (driver del gestionale del cliente)
         'driver' => env('ERP_DRIVER', 'null'),

@@ -25,9 +25,8 @@ return new class extends Migration
             $table->decimal('prezzo_base', 10, 2)->nullable();  // fallback per prodotti "semplici"
             $table->boolean('attivo')->default(true);
 
-            // mapping e-commerce
+            // mapping e-commerce (Shopify)
             $table->string('shopify_product_id')->nullable()->index();
-            $table->unsignedBigInteger('woocommerce_product_id')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();
@@ -51,7 +50,6 @@ return new class extends Migration
             $table->integer('quantita')->default(0);            // giacenza
             $table->string('barcode')->nullable();
             $table->string('shopify_variant_id')->nullable()->index();
-            $table->unsignedBigInteger('woocommerce_variation_id')->nullable()->index();
             $table->timestamps();
 
             $table->unique(['prodotto_id', 'taglia_id', 'colore_id'], 'variante_unica');

@@ -27,7 +27,7 @@ class OrdineB2B extends Model
         'note_agente', 'programmato', 'data_ordine',
         'stripe_session_id', 'stripe_payment_intent', 'pagato_at',
         'email_conferma_inviata_at', 'inviato_erp_at', 'idesterno', 'erp_response',
-        'shopify_order_id', 'woocommerce_order_id', 'wordpress_payload',
+        'shopify_order_id', 'ecommerce_payload',
     ];
 
     protected function casts(): array
@@ -46,7 +46,7 @@ class OrdineB2B extends Model
             'pagato_at' => 'datetime',
             'email_conferma_inviata_at' => 'datetime',
             'inviato_erp_at' => 'datetime',
-            'wordpress_payload' => 'array',
+            'ecommerce_payload' => 'array',
             'erp_response' => 'array',
         ];
     }
@@ -83,7 +83,7 @@ class OrdineB2B extends Model
 
     public function scopeB2b($query)
     {
-        return $query->whereNull('shopify_order_id')->whereNull('woocommerce_order_id');
+        return $query->whereNull('shopify_order_id');
     }
 
     public function isPagato(): bool

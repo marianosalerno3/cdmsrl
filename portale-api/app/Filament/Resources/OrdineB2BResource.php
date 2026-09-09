@@ -63,13 +63,12 @@ class OrdineB2BResource extends Resource
                 Forms\Components\Textarea::make('note_agente')->rows(3)->columnSpanFull(),
             ]),
 
-            Forms\Components\Section::make('Dati WordPress / e-commerce')
+            Forms\Components\Section::make('Dati e-commerce')
                 ->collapsed()
-                ->columns(2)
+                ->visible(fn (?OrdineB2B $record) => filled($record?->shopify_order_id))
                 ->schema([
-                    Forms\Components\TextInput::make('woocommerce_order_id')->numeric()->label('ID Ordine WordPress')->disabled(),
                     Forms\Components\TextInput::make('shopify_order_id')->label('ID Ordine Shopify')->disabled(),
-                    Forms\Components\Textarea::make('wordpress_payload')
+                    Forms\Components\Textarea::make('ecommerce_payload')
                         ->label('Payload JSON')
                         ->formatStateUsing(fn ($state) => filled($state) ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : null)
                         ->disabled()->rows(6)->columnSpanFull(),

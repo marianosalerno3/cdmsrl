@@ -95,7 +95,7 @@ Rollback: `git checkout <tag-precedente> && docker compose up -d --build`.
 ### Integrazioni (Configurazioni Sistema)
 - [ ] **Stripe**: chiavi *live*, webhook `https://<API_DOMAIN>/api/stripe/webhook` registrato su Stripe, `stripe_webhook_secret` inserito
 - [ ] **WinMino**: `erp_driver=winmino`, base URL raggiungibile dal server (VPN/whitelist IP), credenziali; pulsante **Test ERP** verde
-- [ ] **Shopify** / **WooCommerce**: domini + token/chiavi; pulsanti **Test** verdi
+- [ ] **Shopify**: shop domain + Admin API token; pulsante **Test Shopify** verde
 - [ ] `sync:clienti` e `sync:giacenze` girano senza errori (log `scheduler`)
 - [ ] Import iniziale prodotti/clienti da WinMino verificato su un campione
 

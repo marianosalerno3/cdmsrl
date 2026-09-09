@@ -12,11 +12,17 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 | [`portale-api/`](portale-api/) | API REST + pannello admin | Laravel 11 · Filament 3 · Sanctum · MySQL |
 | [`portale-web/`](portale-web/) | SPA agenti | Vue 3 · Vite · Tailwind CSS v4 · axios |
 | [`infra/`](infra/) | Deploy di produzione | Caddy · Docker Compose · MariaDB · Redis |
-| [`docs/`](docs/) | Integrazioni | WinMino (ERP) · Shopify / WooCommerce |
+| [`docs/`](docs/) | Integrazioni | WinMino (ERP) · Shopify (B2C) |
 
 ## Architettura
 
 ```
+   WinMino  ──import prodotti/prezzi/giacenze/clienti──▶  portale  ──push──▶  Shopify (B2C)
+   (ERP,                                                   (B2B, gli agenti)
+    master)                                                     │
+                                                                ▼  nuovo ordine
+                                            mail al backoffice CDM → caricamento manuale su WinMino
+
   brand.example.it            api.brand.example.it
   ┌───────────────┐           ┌──────────────────────────┐
   │  portale-web  │  ── API ──▶  portale-api (Laravel)    │
@@ -24,10 +30,10 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
   └───────────────┘  token    │  └─ /access Filament panel│
                               └───────┬──────────────────┘
                                       │ job in coda
-                        ┌─────────────┼─────────────┬───────────────┐
-                        ▼             ▼             ▼               ▼
-                     Stripe        Shopify     WooCommerce      ERP (WinMino
-                   (pagamenti)     (B2C)      (WordPress B2B)   o equivalente)
+                        ┌─────────────┼─────────────┐
+                        ▼             ▼             ▼
+                     Stripe        Shopify        WinMino
+                   (pagamenti)   (push B2C)     (import GET)
 ```
 
 ## Stato
@@ -37,9 +43,9 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 - [x] **Backend — pannello Filament**: risorse (anagrafiche, attributi, Prodotto
       read-first, Ordini B2B, Sostituzioni), Configurazioni Sistema, Dashboard
       con widget, upload massivo immagini
-- [x] **Integrazioni**: `ErpManager`/`WinMinoDriver` (POST completi, GET via
-      decoder `meta`), `ChannelManager` Shopify/WooCommerce (push
-      prodotti/giacenze, pull ordini), job + comandi schedulati
+- [x] **Integrazioni**: import WinMino (`sync:prodotti` / `sync:clienti`, GET via
+      decoder `meta`), push Shopify (`ChannelManager` / `ShopifyChannel`), notifica
+      ordine al backoffice CDM, job + comandi schedulati
 - [x] **Frontend `portale-web/`**: 8 view, carrello vincolato al cliente,
       redirect/verify Stripe
 - [x] **Infra**: `docker compose` (Caddy + api + worker + scheduler + MariaDB +

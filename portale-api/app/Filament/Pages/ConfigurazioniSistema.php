@@ -35,9 +35,6 @@ class ConfigurazioniSistema extends Page implements HasForms
         $s = app(IntegrationSettings::class);
 
         $this->form->fill([
-            'woocommerce_url' => $s->woocommerce_url,
-            'woocommerce_consumer_key' => $s->woocommerce_consumer_key,
-            'woocommerce_consumer_secret' => $s->woocommerce_consumer_secret,
             'shopify_shop_domain' => $s->shopify_shop_domain,
             'shopify_access_token' => $s->shopify_access_token,
             'stripe_key' => $s->stripe_key,
@@ -55,16 +52,6 @@ class ConfigurazioniSistema extends Page implements HasForms
     {
         return $form
             ->schema([
-                Section::make('WordPress / WooCommerce (B2B)')
-                    ->description('Chiavi API da WooCommerce → Impostazioni → Avanzate → REST API')
-                    ->columns(2)
-                    ->schema([
-                        TextInput::make('woocommerce_url')->label('URL WordPress')->url()
-                            ->helperText('URL completo, senza slash finale')->columnSpanFull(),
-                        TextInput::make('woocommerce_consumer_key')->label('Consumer Key')->password()->revealable(),
-                        TextInput::make('woocommerce_consumer_secret')->label('Consumer Secret')->password()->revealable(),
-                    ]),
-
                 Section::make('Shopify (B2C)')
                     ->description('Access Token da Shopify Admin → Apps → Develop apps')
                     ->columns(2)
@@ -99,7 +86,7 @@ class ConfigurazioniSistema extends Page implements HasForms
                     ->schema([
                         Toggle::make('sync_giacenze_automatica')
                             ->label('Sincronizzazione giacenze automatica')
-                            ->helperText('Se attivo, ogni modifica giacenza viene propagata a WooCommerce e Shopify.'),
+                            ->helperText('Se attivo, ogni modifica giacenza viene propagata a Shopify.'),
                     ]),
             ])
             ->statePath('data');
@@ -117,24 +104,6 @@ class ConfigurazioniSistema extends Page implements HasForms
         $s->save();
 
         Notification::make()->success()->title('Configurazioni salvate')->send();
-    }
-
-    public function testWordpress(): void
-    {
-        $s = $this->form->getState();
-
-        try {
-            $resp = Http::withBasicAuth($s['woocommerce_consumer_key'] ?? '', $s['woocommerce_consumer_secret'] ?? '')
-                ->acceptJson()
-                ->timeout(10)
-                ->get(rtrim($s['woocommerce_url'] ?? '', '/').'/wp-json/wc/v3/system_status');
-
-            $resp->successful()
-                ? Notification::make()->success()->title('WooCommerce: connessione OK')->send()
-                : Notification::make()->danger()->title('WooCommerce: errore '.$resp->status())->body((string) $resp->body())->send();
-        } catch (\Throwable $e) {
-            Notification::make()->danger()->title('WooCommerce: '.$e->getMessage())->send();
-        }
     }
 
     public function testShopify(): void

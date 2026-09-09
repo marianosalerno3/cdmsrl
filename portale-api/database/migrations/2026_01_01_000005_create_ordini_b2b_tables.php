@@ -44,11 +44,10 @@ return new class extends Migration
             // Email di conferma
             $table->timestamp('email_conferma_inviata_at')->nullable();
 
-            // Integrazioni in uscita
+            // Integrazioni
             $table->timestamp('inviato_erp_at')->nullable();
-            $table->string('shopify_order_id')->nullable()->index();
-            $table->unsignedBigInteger('woocommerce_order_id')->nullable()->index();
-            $table->json('wordpress_payload')->nullable();      // "Dati JSON WordPress"
+            $table->string('shopify_order_id')->nullable()->index(); // ordini importati da Shopify
+            $table->json('ecommerce_payload')->nullable();           // payload grezzo dell'ordine e-commerce
 
             $table->timestamps();
             $table->softDeletes();

@@ -7,10 +7,6 @@
                 Salva Configurazioni
             </x-filament::button>
 
-            <x-filament::button color="gray" wire:click="testWordpress" icon="heroicon-o-signal">
-                Test WordPress
-            </x-filament::button>
-
             <x-filament::button color="gray" wire:click="testShopify" icon="heroicon-o-signal">
                 Test Shopify
             </x-filament::button>

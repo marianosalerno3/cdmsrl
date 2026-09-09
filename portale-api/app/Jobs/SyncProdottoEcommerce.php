@@ -17,7 +17,7 @@ use Illuminate\Queue\SerializesModels;
  *   'full'      → pushProduct (anagrafica + varianti + immagini + giacenze)
  *   'inventory' → pushInventory (solo giacenze, più rapido)
  *
- * channel: null = tutti i canali abilitati; oppure 'shopify' | 'woocommerce'.
+ * channel: null = tutti i canali abilitati; oppure 'shopify'.
  */
 class SyncProdottoEcommerce implements ShouldQueue
 {

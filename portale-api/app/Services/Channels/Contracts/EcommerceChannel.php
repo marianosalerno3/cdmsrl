@@ -8,7 +8,7 @@ use Carbon\CarbonInterface;
 
 /**
  * Canale e-commerce verso cui pubblicare catalogo/giacenze e da cui leggere ordini.
- * Implementazioni: ShopifyChannel, WooCommerceChannel.
+ * Implementazione: ShopifyChannel.
  */
 interface EcommerceChannel
 {

@@ -103,19 +103,21 @@ resources/views/pdf/     template PDF ordine
 |---|---|
 | Catalogo | Upload Massivo Immagini · Prodotti (read-first, WinMino master) · Dizionario Prodotti |
 | Vendite | Agenti · Clienti (+ approvazione, export CSV) · Sostituzioni (workflow stato) |
-| Ordini | Ordini B2B (tab Tutti/B2B/Shopify, azioni Stato/PDF/Mail/WinMino) |
+| Ordini | Ordini B2B (tab Tutti/B2B/Shopify, azioni Stato/PDF/Mail) |
 | Attributi Prodotto | Categorie · Colori · Generi · Taglie |
 | Configurazione | Stagioni |
-| Sistema | Configurazioni (WooCommerce/Shopify/Stripe/ERP + test + sync) |
+| Sistema | Configurazioni (Shopify/Stripe/ERP + test + sync) |
 
 Dashboard: filtri Stagione / Data Inizio / Data Fine + widget *Statistiche
 principali* (ordini, fatturato, provvigioni, stato Shopify), *Ordini per Stato*,
 *Fatturato netto per Stagione*, *Ordini per Stagione*.
 
-## TODO — prossimi pezzi
-1. **Integrazioni**: `ChannelManager` + `ShopifyChannel` / `WooCommerceChannel`,
-   `ErpManager` (driver WinMino), job in coda; completare gli stub
-   `SyncProdottoEcommerce`, `InviaOrdineErp`, comandi `sync:giacenze` /
-   `sync:clienti`.
-2. **Frontend** `portale-web/` (Vue 3 + Vite + Tailwind v4).
-3. **Infra**: Caddy + docker-compose + checklist go-live.
+## Integrazioni
+
+- **WinMino (import)** — `sync:prodotti`, `sync:clienti` · `App\Services\Erp\*` ·
+  [`docs/winmino-integration.md`](../docs/winmino-integration.md)
+- **Shopify (push B2C)** — `sync:giacenze`, `orders:pull-ecommerce` ·
+  `App\Services\Channels\*` · [`docs/ecommerce-channels.md`](../docs/ecommerce-channels.md)
+- **Stripe** — pagamenti carta B2B (`checkout-session` / `verify-stripe-payment` / webhook)
+
+Ancora da completare: mappatura campi GET WinMino con risposte reali (Magis).

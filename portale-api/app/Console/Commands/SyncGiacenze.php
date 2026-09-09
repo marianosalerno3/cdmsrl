@@ -19,7 +19,7 @@ class SyncGiacenze extends Command
 {
     protected $signature = 'sync:giacenze
         {--full : pubblica anagrafica completa invece delle sole giacenze}
-        {--channel= : shopify|woocommerce (default: tutti gli abilitati)}
+        {--channel= : nome canale (default: tutti gli abilitati; oggi solo shopify)}
         {--codice=* : limita a uno o più codici prodotto}';
 
     protected $description = 'Push giacenze/prodotti verso i canali e-commerce';

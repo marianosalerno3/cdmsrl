@@ -20,7 +20,7 @@ use Filament\Tables\Table;
  * Nel pannello si gestisce SOLO cio' che l'ERP non fornisce:
  *   - immagini prodotto e variante
  *   - flag "pubblica sul portale" (attivo)
- *   - push verso Shopify / WooCommerce
+ *   - push verso Shopify (B2C)
  */
 class ProdottoResource extends Resource
 {
@@ -72,10 +72,8 @@ class ProdottoResource extends Resource
                         ->label('Genere')
                         ->helperText('Non gestito da WinMino: assegnalo qui.'),
                     Forms\Components\Placeholder::make('mapping')
-                        ->label('Mapping e-commerce')
-                        ->content(fn (?Prodotto $record) => $record
-                            ? 'Shopify: '.($record->shopify_product_id ?: '—').' · Woo: '.($record->woocommerce_product_id ?: '—')
-                            : '—'),
+                        ->label('Mapping Shopify')
+                        ->content(fn (?Prodotto $record) => $record?->shopify_product_id ?: 'non pubblicato'),
                 ]),
 
             Forms\Components\Section::make('Immagini prodotto')
@@ -127,20 +125,12 @@ class ProdottoResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Immagini / Portale'),
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('shopify')
-                        ->label('Invia a Shopify')->icon('heroicon-o-shopping-bag')
-                        ->action(function (Prodotto $r) {
-                            SyncProdottoEcommerce::dispatch($r->id, 'shopify');
-                            Notification::make()->success()->title('Invio a Shopify in coda')->send();
-                        }),
-                    Tables\Actions\Action::make('woocommerce')
-                        ->label('Invia a WooCommerce')->icon('heroicon-o-globe-alt')
-                        ->action(function (Prodotto $r) {
-                            SyncProdottoEcommerce::dispatch($r->id, 'woocommerce');
-                            Notification::make()->success()->title('Invio a WooCommerce in coda')->send();
-                        }),
-                ])->label('Sincronizza')->icon('heroicon-m-arrow-path')->button(),
+                Tables\Actions\Action::make('shopify')
+                    ->label('Invia a Shopify')->icon('heroicon-o-shopping-bag')
+                    ->action(function (Prodotto $r) {
+                        SyncProdottoEcommerce::dispatch($r->id, 'shopify');
+                        Notification::make()->success()->title('Invio a Shopify in coda')->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

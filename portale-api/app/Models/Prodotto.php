@@ -19,7 +19,7 @@ class Prodotto extends Model
     protected $fillable = [
         'codice', 'nome', 'descrizione', 'composizione', 'tessuto', 'pacchetto',
         'tipo', 'unita', 'categoria_id', 'stagione_id', 'genere_id',
-        'prezzo_base', 'attivo', 'shopify_product_id', 'woocommerce_product_id',
+        'prezzo_base', 'attivo', 'shopify_product_id',
     ];
 
     protected function casts(): array

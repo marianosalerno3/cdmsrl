@@ -6,10 +6,6 @@ return new class extends SettingsMigration
 {
     public function up(): void
     {
-        $this->migrator->add('integrations.woocommerce_url', null);
-        $this->migrator->add('integrations.woocommerce_consumer_key', null);
-        $this->migrator->addEncrypted('integrations.woocommerce_consumer_secret', null);
-
         $this->migrator->add('integrations.shopify_shop_domain', null);
         $this->migrator->addEncrypted('integrations.shopify_access_token', null);
 
