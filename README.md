@@ -10,8 +10,9 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 | Cartella | Descrizione | Stack |
 |---|---|---|
 | [`portale-api/`](portale-api/) | API REST + pannello admin | Laravel 11 · Filament 3 · Sanctum · MySQL |
-| `portale-web/` _(in arrivo)_ | SPA agenti | Vue 3 · Vite · Tailwind CSS v4 · axios |
-| `infra/` _(in arrivo)_ | Reverse proxy, deploy | Caddy · docker-compose |
+| [`portale-web/`](portale-web/) | SPA agenti | Vue 3 · Vite · Tailwind CSS v4 · axios |
+| [`infra/`](infra/) | Deploy di produzione | Caddy · Docker Compose · MariaDB · Redis |
+| [`docs/`](docs/) | Integrazioni | WinMino (ERP) · Shopify / WooCommerce |
 
 ## Architettura
 
@@ -34,15 +35,23 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 - [x] **Backend — fondamenta**: schema DB, model, enum, API SPA (auth Sanctum,
       catalogo, ordini, PDF, Stripe, sostituzioni), pannello Filament base, seeder
 - [x] **Backend — pannello Filament**: risorse (anagrafiche, attributi, Prodotto
-      read-first, Ordini B2B, Sostituzioni), pagina Configurazioni Sistema,
-      Dashboard con filtri + 4 widget (statistiche, ordini per stato,
-      fatturato/ordini per stagione), upload massivo immagini
-- [ ] Backend — integrazioni (Shopify / WooCommerce / ERP WinMino) + job + comandi sync
-- [ ] Frontend `portale-web/`
-- [ ] Infra / deploy
+      read-first, Ordini B2B, Sostituzioni), Configurazioni Sistema, Dashboard
+      con widget, upload massivo immagini
+- [x] **Integrazioni**: `ErpManager`/`WinMinoDriver` (POST completi, GET via
+      decoder `meta`), `ChannelManager` Shopify/WooCommerce (push
+      prodotti/giacenze, pull ordini), job + comandi schedulati
+- [x] **Frontend `portale-web/`**: 8 view, carrello vincolato al cliente,
+      redirect/verify Stripe
+- [x] **Infra**: `docker compose` (Caddy + api + worker + scheduler + MariaDB +
+      Redis), Dockerfile multi-stage, checklist go-live
+- [ ] Attivazione WinMino (endpoint/credenziali da Magis — vedi
+      [`docs/winmino-integration.md`](docs/winmino-integration.md))
+- [ ] Test dei canali e-commerce contro store reali
 
 > **Prodotto**: la fonte è WinMino (ERP). Nel pannello codice/testi/varianti/
 > prezzi/giacenze sono sola lettura; si gestiscono solo immagini e flag di
-> pubblicazione. Import ERP = pezzo integrazioni.
+> pubblicazione.
 
-Dettagli e setup: [`portale-api/README.md`](portale-api/README.md).
+Setup sviluppo: [`portale-api/README.md`](portale-api/README.md) ·
+[`portale-web/README.md`](portale-web/README.md).
+Deploy: [`infra/README.md`](infra/README.md).
