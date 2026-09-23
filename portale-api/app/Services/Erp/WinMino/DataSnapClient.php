@@ -32,7 +32,8 @@ class DataSnapClient
      */
     public function get(string $module, string $function, array $params = [], string $prefix = 'JSO'): mixed
     {
-        $path = "/datasnap/rest/{$module}/{$prefix}_{$function}";
+        // gli endpoint immagine (GetImmagineBase64, GetStreamImmagine…) non hanno prefisso di formato
+        $path = "/datasnap/rest/{$module}/".($prefix === '' ? '' : "{$prefix}_").$function;
 
         $segment = collect($params)
             ->reject(fn ($v) => $v === null || $v === '')

@@ -165,9 +165,45 @@ Salviamo l'intera risposta in `ordini_b2b.erp_response` (json) e, su `SUCCESSO`,
 | Ordini (dedup/stato) | `GetOrdiniclienti` | `DaDataModifica*`,`DaDataRegistrazione*`,`ADataRegistrazione*`,`NumeroOrdine`,`RiferimentoCliente` |
 | Immagini articolo | `GetListaImmaginiArticolo(Colori/Ex)` + `GetImmagineBase64` | `CodArticolo` |
 
-> **Immagini**: WinMino ha i webservice, ma per CDM le immagini sono gestite nel
-> pannello. Se in WinMino ci fossero immagini, l'import può tirarle
-> (`GetListaImmaginiArticolo` + `GetImmagineBase64`) — da confermare.
+> **Immagini**: WinMino espone i webservice (`GetListaImmaginiArticolo`,
+> `GetListaImmaginiArticoloColori`, `GetListaImmaginiArticoloEx` con `DataAggiornamento`
+> per l'incrementale; download con `GetImmagineBase64` o `GetStreamImmagine/<nome>?json=false`
+> per lo stream binario). Oggi le immagini si caricano dal pannello; se CDM le
+> tiene già in WinMino l'import può essere automatico — **da chiedere a CDM/Magis**.
+
+### Note dall'analisi della doc GET (v. 2023.04.16.011, rev. 2026-09-23)
+
+**Endpoint utili non ancora usati**
+
+| Funzione | Uso possibile |
+|---|---|
+| `GetArticoliCategorie` (nuova in questa revisione) | legame articolo → categoria (evita di dedurlo da `GetArticoli`) |
+| `GetDisponibilitaAScaderePerColore` (`CodArticolo`*, `CodColore`) | disponibilità presente **e futura** per data (ordini fornitori in arrivo): base per gli "ordini programmati" |
+| `GetBlocchi` | blocchi cliente; per ordini il valore è 0 nessuna azione · 1 avviso · 2 avviso+conferma · **3 blocca**. Un cliente con blocco 3 non dovrebbe poter ordinare dal portale (verificare nel `meta` di `GetClienti` come il blocco è collegato al cliente) |
+| `GetOrdiniclienti` con `RiferimentoCliente` | se il commerciale scrive il numero ordine del portale (`ORD-…`) nel campo RIFCLIENTE di WinMino, il portale può rileggere lo stato dell'ordine (sola lettura) |
+| `GetMailClienti`, `GetGerarchiaCommerciale` | email clienti e commerciali interni (destinatari notifiche) |
+
+**Semantica delle varianti `EC_*` (`T` / `E` / `S`)** — stessa formula
+*q.tà = disponibile − da evadere ai clienti*, solo depositi con flag
+"partecipa al calcolo del surplus (e-commerce)", solo quantità **positive**, ordini
+non più vecchi di un anno. Cambia quali ordini si sottraggono:
+`T` tutti gli ordini clienti · `E` solo ordini aziendali, **esclusi** quelli ricevuti dall'e-commerce · `S` solo ordini di tipo e-commerce.
+(La lettura T/E/S come Tutti/Esclusi/Solo è un'inferenza dalle descrizioni.)
+Quale usare per Shopify e quale per il portale B2B è una **decisione da prendere con CDM**:
+oggi `sync:prodotti` usa `E`.
+
+**Rischi da verificare sui dati reali**
+
+1. Le `EC_*` restituiscono solo quantità positive: un articolo/variante esaurito
+   può **sparire** dalla risposta. L'import deve trattare "assente" come 0, altrimenti la
+   giacenza resta all'ultimo valore positivo (rischio vendita di merce esaurita).
+2. `sync:prodotti` incrementale usa `GetArticoli` (anagrafica, senza quantità) mentre il
+   full usa `EC_GetGeneraleArticoliE` (con quantità): i due percorsi non producono gli stessi campi.
+3. `GetListiniPrezzi` e `GetGiacenze` non hanno `DaData`: non esiste un incrementale
+   per prezzi e giacenze, serve sempre la lettura completa (con `CodListino` per il solo listino base).
+4. `DaData` ha granularità di giorno (`31-01-2010`): l'incrementale deve sovrapporsi di almeno un giorno.
+5. `GetMovimentiMagazzinoBarcode` accetta **solo** parametri nominati (`Nome=valore`), non il valore posizionale.
+6. Nessuna paginazione documentata sui GET massivi.
 
 ---
 
