@@ -43,7 +43,13 @@ interface ErpDriver
 
     public function getAgenti(?CarbonInterface $since = null): array;
 
-    public function getArticoli(?CarbonInterface $since = null): array;
+    /**
+     * Anagrafica articoli. `$keep` filtra i record già in fase di decodifica
+     * (GetArticoli ha decine di migliaia di righe: non materializzarle tutte).
+     *
+     * @param  callable(array<string,mixed>): bool|null  $keep
+     */
+    public function getArticoli(?CarbonInterface $since = null, ?callable $keep = null): array;
 
     /** Anagrafica completa articoli + giacenze da pubblicare (EC_GetGeneraleArticoliE). */
     public function getArticoliEcommerce(): array;
@@ -63,6 +69,12 @@ interface ErpDriver
     public function getCategorie(): array;
 
     public function getStagioni(): array;
+
+    /** Gruppi merceologici (CODICE, NOME) — le "categorie" di prodotto. */
+    public function getGruppiMerceologici(): array;
+
+    /** Pacchetti (CODICE, NOME). */
+    public function getPacchetti(): array;
 
     public function getPagamenti(): array;
 

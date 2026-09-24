@@ -21,9 +21,9 @@ Il flusso principale è **read-only**: `WinMino → portale → Shopify B2C`.
 
 - **DataSnap REST** (Delphi). URL: `http://<host>:8080/datasnap/rest/<modulo>/<PREFISSO>_<Funzione>[/parametri]`
 - Formati GET via prefisso: **`JSO_`** (JSON compatto — usiamo questo), `JSS_`, `XML_`
-- Risposta GET: `{ "meta": [...campi con nome/tipo/dimensione...], "data": [[...],[...]] }` — decodifica **dinamica** dal `meta`, mai posizionale
+- Risposta GET: `{"result":[{"meta":[[nome,tipo,dim?],…],"data":[[…],…]}]}` — record posizionali, decodifica **dinamica** dal `meta` (`MetaDecoder`); valori stringa, vuoto = `""`
 - Parametri: `/Nome=Valore&Nome2=Valore2` — o solo valore se il parametro è unico
-- **Date `dd-mm-yyyy`**, **decimali col punto** (`12345.67`)
+- **Date `dd-mm-yyyy`**. Decimali: **col punto nei POST** (`12345.67`), **con la virgola nelle risposte GET** (`"24,5"`)
 - Auth: **username + password** (da richiedere a Magis) — presumibilmente HTTP Basic; **da confermare per i POST**
 - ⚠️ **HTTP in chiaro** su porta custom → serve VPN / IP whitelisting tra il server API e WinMino
 
@@ -192,18 +192,33 @@ non più vecchi di un anno. Cambia quali ordini si sottraggono:
 Quale usare per Shopify e quale per il portale B2B è una **decisione da prendere con CDM**:
 oggi `sync:prodotti` usa `E`.
 
-**Rischi da verificare sui dati reali**
+**Esito della verifica sui dati reali (rev. 2026-09-24)**
 
-1. Le `EC_*` restituiscono solo quantità positive: un articolo/variante esaurito
-   può **sparire** dalla risposta. L'import deve trattare "assente" come 0, altrimenti la
-   giacenza resta all'ultimo valore positivo (rischio vendita di merce esaurita).
-2. `sync:prodotti` incrementale usa `GetArticoli` (anagrafica, senza quantità) mentre il
-   full usa `EC_GetGeneraleArticoliE` (con quantità): i due percorsi non producono gli stessi campi.
-3. `GetListiniPrezzi` e `GetGiacenze` non hanno `DaData`: non esiste un incrementale
-   per prezzi e giacenze, serve sempre la lettura completa (con `CodListino` per il solo listino base).
-4. `DaData` ha granularità di giorno (`31-01-2010`): l'incrementale deve sovrapporsi di almeno un giorno.
-5. `GetMovimentiMagazzinoBarcode` accetta **solo** parametri nominati (`Nome=valore`), non il valore posizionale.
-6. Nessuna paginazione documentata sui GET massivi.
+Formato risposta (JSO): `{"result":[{"meta":[["NOME","ftString",50],["PREZZO","ftFloat"]…],"data":[[…],…]}]}`.
+Tutti i valori sono **stringhe**, il vuoto è `""` (= NULL) e i **decimali usano la virgola** (`"24,5"`):
+`MetaDecoder` li tipizza. I codici articolo contengono `/` e vanno **URL-encodati** nei parametri
+(`G2389%2F0330%2F1123`), altrimenti il server risponde HTTP 500 (lo fa `DataSnapClient`).
+
+1. Le `EC_*` (giacenze e-commerce) oggi tornano 0 righe (nessun deposito flaggato "surplus e-commerce"):
+   le giacenze si leggono da `GetGiacenze` per articolo (`ESISTENZA − IMPEGNATA` per deposito/colore/taglia).
+   Una variante assente = 0 pezzi (il portale la azzera).
+2. `GetArticoli` (~25k articoli, ~6,5 MB, ~20 s) non ha prezzo né categoria: il prezzo sta solo nei listini
+   (`GetListiniPrezzi`, ~180 listini), la categoria è il **gruppo merceologico** (`GetGruppiMerceologici`);
+   `GetCategorieArticoli` è vuota. Il filtro "pubblica su e-commerce" (`EC_GetArticoli`, 550 articoli 2013–2015) non è la selezione di CDM.
+3. `GetListiniPrezzi` e `GetGiacenze` non hanno `DaData`: nessun incrementale, lettura completa.
+   `DaData` ha granularità di giorno (`31-01-2010`).
+4. `GetMovimentiMagazzinoBarcode` accetta **solo** parametri nominati (`Nome=valore`).
+5. Nessuna paginazione documentata sui GET massivi (`GetBarcodeTaglieColori` completo: 240k righe, 11 MB, 35 s).
+
+### Import nel portale (`sync:prodotti`)
+
+Importa **solo** le selezioni `LINEA:STAGIONE` in `WINMINO_IMPORT_SELEZIONI` (oggi `CG:PE27` = Clara G,
+Primavera/Estate 2027 → 195 articoli). Prezzo dal listino `WINMINO_LISTINO_BASE` (`CLARAG`); gli articoli
+**senza prezzo** in quel listino sono esclusi (18 su 195 → 177 importati, 2.180 varianti).
+Varianti = `GetBarcodeTaglieColori` per articolo; giacenza = somma `ESISTENZA − IMPEGNATA` sui depositi
+di `WINMINO_DEPOSITI_GIACENZA` (vuoto = tutti: oggi DG, D1, DK). Categoria = gruppo merceologico.
+Per aggiungere stagioni/linee basta estendere la variabile (es. `CG:PE27,CG:AI27`) e rilanciare.
+`--dry-run` mostra cosa verrebbe importato senza scrivere.
 
 ---
 
@@ -218,22 +233,22 @@ oggi `sync:prodotti` usa `E`.
 
 ---
 
-## Punti aperti (bloccanti per i GET / test end-to-end)
+## Punti aperti
 
-1. **Una risposta di esempio (`meta`+`data`) per ogni GET** usato — o accesso in lettura a un WinMino reale.
-2. **Host:porta del WinMino di CDM** + raggiungibilità dal server API (VPN / whitelist; è HTTP).
-3. **Credenziali** user/password + conferma metodo auth (Basic? anche sui POST?).
-4. **Nome `Server module`** GET sull'installazione CDM (default `TsmStandard`).
-5. **Codici di dominio**: `LISTINO` per `standard`/`plus5`; codici `PAGAMENTO`; valore `UNITA`; `NAZIONE`/`DIVISA`/`VETTORE`/`PORTO` di default.
-6. Esiste una versione più recente della doc / un OpenAPI? (queste sono 2020–2023).
-7. Paginazione / limiti sui GET massivi — non documentati.
+1. **Depositi da sommare per la giacenza** (oggi tutti: DG 473 · D1 8 · DK 1 pezzi netti): confermare con CDM quali sono vendibili sul B2B.
+2. **Immagini**: WinMino ha i nomi file (`GetListaImmaginiArticolo`, es. `G238903301123.JPG`); da verificare se `GetImmagineBase64` restituisce i file.
+3. **Clienti**: `GetClienti` restituisce 3.397 anagrafiche (campi noti dal `meta`, incl. `CODAGENTE`, `CODLISTINOPREZZI`, `BLOCCO`): decidere quali portare sul portale.
+4. Raggiungibilità: il server è in **HTTP** su IP pubblico con credenziali Basic — per la produzione servono credenziali dedicate e VPN/whitelist.
+5. Confermare che questo WinMino sia quello di CDM (linee Clara G, Oltretempo, Classe di Oltretempo, Valentina Rio…).
+6. Codici di dominio per gli ordini: `PAGAMENTO` (ora noti da `GetPagamenti`), `UNITA`, `NAZIONE`/`DIVISA`/`VETTORE`/`PORTO`.
 
 ## Stato implementazione
 
 - [x] `ErpManager` + contratto `ErpDriver` + `NullErpDriver`
 - [x] `DataSnapClient` (HTTP Basic, URL, retry) + `MetaDecoder` (`{meta,data}` → righe associative)
 - [x] `WinMinoDriver` — **GET** (18 funzioni, decoder generico) + **POST** (`AddCliente` / `AddDestinazione` / `AddOrdineCliente`, builder payload, parser `result` / codici −1..−7). Le POST **non sono collegate a nessun flusso** (vedi Perimetro).
-- [x] `SyncProdotti` (`sync:prodotti`), `SyncClienti` (`sync:clienti`) — mappatura campi `pick(...)` **da confermare con i `meta` reali** (punto 1)
+- [x] `SyncProdotti` (`sync:prodotti`) — **verificato su WinMino reale**: mappatura campi dai `meta`, selezione LINEA:STAGIONE, listino base, esclusione senza prezzo, giacenze
+- [ ] `SyncClienti` (`sync:clienti`) — mappatura `pick(...)` ancora da rifare sul `meta` reale di `GetClienti`
 - [x] tabella `destinazioni` + model, campi ERP su schema, config `winmino.php`
 - [x] notifica ordine al backoffice CDM (`NuovoOrdineBackofficeMail`, `BACKOFFICE_EMAIL`)
-- [ ] finalizzare la mappatura GET con risposte reali; codici listino/pagamento/UM di CDM
+- [ ] clienti/agenti da WinMino; immagini; depositi giacenza; codici ordine di CDM

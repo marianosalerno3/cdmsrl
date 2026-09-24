@@ -32,6 +32,20 @@ return [
     'http_retries' => 2,
     'http_retry_sleep_ms' => 800,
 
+    // Import catalogo WinMino → portale: SOLO ciò che CDM decide di portare sul portale.
+    'import' => [
+        // coppie LINEA:STAGIONE (codici WinMino), separate da virgola. Es. "CG:PE27,CG:AI27".
+        // Vuoto = non importa nessun articolo.
+        'selezioni' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_IMPORT_SELEZIONI', 'CG:PE27'))))),
+
+        // Listino prezzi base (uno solo): il portale applica poi i ricarichi (plus5 ecc.).
+        // Gli articoli senza prezzo in questo listino NON vengono importati.
+        'listino_base' => env('WINMINO_LISTINO_BASE', 'CLARAG'),
+
+        // Depositi da sommare per la giacenza (codici WinMino, virgola). Vuoto = tutti.
+        'depositi' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_DEPOSITI_GIACENZA', ''))))),
+    ],
+
     // Default di testata ordine
     'defaults' => [
         'unita' => env('WINMINO_UNITA', 'NR'),      // TODO confermare (unità di misura riga)
@@ -44,7 +58,7 @@ return [
 
     // enum portale -> codice listino WinMino (VARCHAR 6)  — TODO confermare i codici
     'listino_map' => [
-        ListinoTipo::Standard->value => env('WINMINO_LISTINO_STANDARD', 'STD'),
+        ListinoTipo::Standard->value => env('WINMINO_LISTINO_STANDARD', env('WINMINO_LISTINO_BASE', 'CLARAG')),
         ListinoTipo::Plus5->value => env('WINMINO_LISTINO_PLUS5', 'PLUS5'),
         ListinoTipo::Plus10->value => env('WINMINO_LISTINO_PLUS10', 'PLUS10'),
         ListinoTipo::Outlet->value => env('WINMINO_LISTINO_OUTLET', 'OUT'),

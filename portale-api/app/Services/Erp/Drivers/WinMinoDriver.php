@@ -155,9 +155,9 @@ class WinMinoDriver implements ErpDriver
         return $this->getList('GetAgenti', $since ? ['DaData' => $since->format('d-m-Y')] : []);
     }
 
-    public function getArticoli(?CarbonInterface $since = null): array
+    public function getArticoli(?CarbonInterface $since = null, ?callable $keep = null): array
     {
-        return $this->getList('GetArticoli', $since ? ['DaData' => $since->format('d-m-Y')] : []);
+        return $this->getList('GetArticoli', $since ? ['DaData' => $since->format('d-m-Y')] : [], $keep);
     }
 
     public function getArticoliEcommerce(): array
@@ -206,6 +206,16 @@ class WinMinoDriver implements ErpDriver
     public function getStagioni(): array
     {
         return $this->getList('GetStagioni');
+    }
+
+    public function getGruppiMerceologici(): array
+    {
+        return $this->getList('GetGruppiMerceologici');
+    }
+
+    public function getPacchetti(): array
+    {
+        return $this->getList('GetPacchetti');
     }
 
     public function getPagamenti(): array
@@ -260,10 +270,11 @@ class WinMinoDriver implements ErpDriver
      * @param  array<string,scalar>  $params
      * @return array<int, array<string,mixed>>
      */
-    private function getList(string $function, array $params = []): array
+    private function getList(string $function, array $params = [], ?callable $keep = null): array
     {
         return MetaDecoder::decode(
             $this->client->get($this->moduleGet, $function, $params, $this->prefix),
+            $keep,
         );
     }
 }

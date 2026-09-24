@@ -90,6 +90,7 @@ class DataSnapClient
             return $v->format('d-m-Y');
         }
 
-        return (string) $v;
+        // i codici articolo contengono "/" (es. G2389/0330/1123): senza encoding DataSnap risponde HTTP 500
+        return rawurlencode((string) $v);
     }
 }

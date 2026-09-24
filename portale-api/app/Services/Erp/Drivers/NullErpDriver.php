@@ -60,7 +60,7 @@ class NullErpDriver implements ErpDriver
         return [];
     }
 
-    public function getArticoli(?CarbonInterface $since = null): array
+    public function getArticoli(?CarbonInterface $since = null, ?callable $keep = null): array
     {
         return [];
     }
@@ -106,6 +106,16 @@ class NullErpDriver implements ErpDriver
     }
 
     public function getStagioni(): array
+    {
+        return [];
+    }
+
+    public function getGruppiMerceologici(): array
+    {
+        return [];
+    }
+
+    public function getPacchetti(): array
     {
         return [];
     }
