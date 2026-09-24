@@ -87,6 +87,12 @@ class SyncProdotti extends Command
             $this->line('  '.implode(', ', array_column($senzaPrezzo, 'CODICE')));
         }
 
+        // prodotti eliminati dal pannello: non si reimportano (e il codice è ancora occupato dal soft delete)
+        $eliminati = Prodotto::onlyTrashed()->pluck('codice')->flip()->all();
+        if ($eliminati !== []) {
+            $conPrezzo = array_values(array_filter($conPrezzo, fn ($a) => ! isset($eliminati[$a['CODICE']])));
+        }
+
         if ($limit = (int) $this->option('limit')) {
             $conPrezzo = array_slice($conPrezzo, 0, $limit);
         }

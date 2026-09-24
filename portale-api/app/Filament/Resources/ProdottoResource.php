@@ -140,6 +140,11 @@ class ProdottoResource extends Resource
                     Tables\Actions\BulkAction::make('nascondi')
                         ->icon('heroicon-o-eye-slash')
                         ->action(fn ($records) => $records->each->update(['attivo' => false])),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->label('Elimina')
+                        ->modalHeading('Eliminare i prodotti selezionati?')
+                        ->modalDescription('I prodotti spariscono dal portale (lo storico degli ordini resta). Un prodotto eliminato non viene reimportato da WinMino.')
+                        ->modalSubmitActionLabel('Sì, elimina'),
                 ]),
             ]);
     }

@@ -215,8 +215,8 @@ Tutti i valori sono **stringhe**, il vuoto è `""` (= NULL) e i **decimali usano
 Importa **solo** le selezioni `LINEA:STAGIONE` in `WINMINO_IMPORT_SELEZIONI` (oggi `CG:PE27` = Clara G,
 Primavera/Estate 2027 → 195 articoli). Prezzo dal listino `WINMINO_LISTINO_BASE` (`CLARAG`); gli articoli
 **senza prezzo** in quel listino sono esclusi (18 su 195 → 177 importati, 2.180 varianti).
-Varianti = `GetBarcodeTaglieColori` per articolo; giacenza = somma `ESISTENZA − IMPEGNATA` sui depositi
-di `WINMINO_DEPOSITI_GIACENZA` (vuoto = tutti: oggi DG, D1, DK). Categoria = gruppo merceologico.
+Varianti = `GetBarcodeTaglieColori` per articolo; giacenza = `ESISTENZA − IMPEGNATA` (mai negativa) del solo
+deposito **DG** (`WINMINO_DEPOSITI_GIACENZA=DG`; D1 e DK ignorati). I prodotti eliminati dal pannello non vengono reimportati. Categoria = gruppo merceologico.
 Per aggiungere stagioni/linee basta estendere la variabile (es. `CG:PE27,CG:AI27`) e rilanciare.
 `--dry-run` mostra cosa verrebbe importato senza scrivere.
 
@@ -235,7 +235,6 @@ Per aggiungere stagioni/linee basta estendere la variabile (es. `CG:PE27,CG:AI27
 
 ## Punti aperti
 
-1. **Depositi da sommare per la giacenza** (oggi tutti: DG 473 · D1 8 · DK 1 pezzi netti): confermare con CDM quali sono vendibili sul B2B.
 2. **Immagini**: WinMino ha i nomi file (`GetListaImmaginiArticolo`, es. `G238903301123.JPG`); da verificare se `GetImmagineBase64` restituisce i file.
 3. **Clienti**: `GetClienti` restituisce 3.397 anagrafiche (campi noti dal `meta`, incl. `CODAGENTE`, `CODLISTINOPREZZI`, `BLOCCO`): decidere quali portare sul portale.
 4. Raggiungibilità: il server è in **HTTP** su IP pubblico con credenziali Basic — per la produzione servono credenziali dedicate e VPN/whitelist.

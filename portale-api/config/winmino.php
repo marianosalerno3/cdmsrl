@@ -42,8 +42,9 @@ return [
         // Gli articoli senza prezzo in questo listino NON vengono importati.
         'listino_base' => env('WINMINO_LISTINO_BASE', 'CLARAG'),
 
-        // Depositi da sommare per la giacenza (codici WinMino, virgola). Vuoto = tutti.
-        'depositi' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_DEPOSITI_GIACENZA', ''))))),
+        // Depositi da cui leggere la giacenza (codici WinMino, virgola). Se più di uno vengono sommati;
+        // vuoto = tutti. CDM: SOLO il deposito DG (gli altri non sono vendibili).
+        'depositi' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_DEPOSITI_GIACENZA', 'DG'))))),
     ],
 
     // Default di testata ordine
