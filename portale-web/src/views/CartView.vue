@@ -157,6 +157,13 @@ onMounted(async () => {
           <div class="flex justify-between">
             <span>Spese spedizione</span><span>{{ money(cart.shipping.value) }}</span>
           </div>
+          <p class="-mt-1 text-xs text-zinc-400">
+            <template v-if="cart.programmato.value">Ordine programmato: spedizione fissa.</template>
+            <template v-else>
+              Pronto: {{ money(config.spedizione_pronto_fissa) }} fino a {{ money(config.spedizione_pronto_soglia) }};
+              da {{ money(config.spedizione_pronto_soglia) }} in su {{ config.spedizione_pronto_perc }}% sul totale ordine.
+            </template>
+          </p>
           <div class="flex justify-between text-zinc-500">
             <span>IVA ({{ cart.vatRate.value }}%)</span><span>{{ money(cart.vatAmount.value) }}</span>
           </div>

@@ -26,6 +26,7 @@ class ProductDetailResource extends JsonResource
             'tipo' => $this->tipo->value,
             'categoria' => $this->categoria?->nome,
             'stagione' => $this->stagione?->codice,
+            'programmata' => (bool) $this->stagione?->programmata,
             'genere' => $this->genere?->nome,
             'immagini' => $this->immagini->map(fn ($i) => $i->url)->values(),
             'varianti' => $this->varianti->map(fn ($v) => [

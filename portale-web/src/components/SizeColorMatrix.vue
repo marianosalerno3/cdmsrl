@@ -54,6 +54,7 @@ function aggiungi() {
       sku: v.sku,
       prezzo: v.prezzo,
       quantita: x.q,
+      programmata: !!props.product.programmata,
     }
   })
   emit('add', lines)

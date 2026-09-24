@@ -2,7 +2,7 @@ import { reactive, computed } from 'vue'
 import { useConfig } from '@/stores/config'
 
 /**
- * Riga carrello: { varianteId, prodottoId, codice, nome, taglia, colore, sku, prezzo, quantita }
+ * Riga carrello: { varianteId, prodottoId, codice, nome, taglia, colore, sku, prezzo, quantita, programmata }
  * Il carrello è vincolato al cliente selezionato (vedi stores/customer.js -> select()).
  */
 const state = reactive({
@@ -32,7 +32,17 @@ export function useCart() {
   const subtotal = computed(() =>
     round2(state.items.reduce((s, i) => s + i.prezzo * i.quantita, 0)),
   )
-  const shipping = computed(() => Number(config.spese_spedizione || 0))
+  // ordine programmato = almeno una riga di una stagione "programmata"
+  const programmato = computed(() => state.items.some((i) => i.programmata))
+  // pronto: fissa fino alla soglia, da soglia in su % sul totale merce; programmato: spesa fissa
+  const shipping = computed(() => {
+    if (!state.items.length) return 0
+    if (programmato.value) return Number(config.spese_spedizione || 0)
+    const soglia = Number(config.spedizione_pronto_soglia ?? 300)
+    return subtotal.value >= soglia
+      ? round2((subtotal.value * Number(config.spedizione_pronto_perc ?? 5)) / 100)
+      : Number(config.spedizione_pronto_fissa ?? 10)
+  })
   const vatRate = computed(() => Number(config.vat ?? 22))
   const vatAmount = computed(() => round2(((subtotal.value + shipping.value) * vatRate.value) / 100))
   const total = computed(() => round2(subtotal.value + shipping.value + vatAmount.value))
@@ -90,6 +100,7 @@ export function useCart() {
     totalPieces,
     subtotal,
     shipping,
+    programmato,
     vatRate,
     vatAmount,
     total,

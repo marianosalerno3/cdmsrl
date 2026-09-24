@@ -35,7 +35,7 @@ class OrderController extends Controller
 
         $ordine = DB::transaction(function () use ($request, $agente, $cliente, $listino) {
             $righeInput = collect($request->validated('righe'));
-            $varianti = VarianteProdotto::with('prodotto')
+            $varianti = VarianteProdotto::with('prodotto.stagione')
                 ->whereIn('id', $righeInput->pluck('variante_id'))
                 ->lockForUpdate()
                 ->get()
@@ -61,7 +61,9 @@ class OrderController extends Controller
             }
 
             $metodo = PaymentMethod::from($request->validated('metodo_pagamento'));
-            $spedizione = $metodo === PaymentMethod::Contrassegno ? $this->prices->shippingCost() : $this->prices->shippingCost();
+            // ordine programmato = almeno una riga di una stagione "programmata"; altrimenti pronto
+            $programmato = $varianti->contains(fn ($v) => (bool) $v->prodotto->stagione?->programmata);
+            $spedizione = $this->prices->shippingFor(round(collect($righe)->sum('totale_riga'), 2), $programmato);
             $totali = $this->prices->totals($righe, $spedizione);
 
             $ordine = OrdineB2B::create([
@@ -75,6 +77,7 @@ class OrderController extends Controller
                 'stato' => OrderStatus::Ricevuto,
                 'metodo_pagamento' => $metodo,
                 'listino_applicato' => $listino,
+                'programmato' => $programmato,
                 'note_agente' => $request->validated('note_agente'),
                 ...$totali,
             ]);

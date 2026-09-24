@@ -31,6 +31,25 @@ class PriceService
         return (float) AppConfig::get('spese_spedizione', (float) env('BIZ_SHIPPING_COST', 15));
     }
 
+    /**
+     * Spese di spedizione di un ordine.
+     *  - PRONTO (non programmato): spesa fissa fino alla soglia, oltre (soglia inclusa) una percentuale
+     *    sul totale merce dell'ordine (imponibile prima di spedizione e IVA). Default 10 € fino a 300 €, da 300 € 5%.
+     *  - PROGRAMMATO: spesa fissa `spese_spedizione`.
+     */
+    public function shippingFor(float $subtotale, bool $programmato): float
+    {
+        if ($programmato) {
+            return round($this->shippingCost(), 2);
+        }
+
+        $fissa = (float) AppConfig::get('spedizione_pronto_fissa', 10);
+        $soglia = (float) AppConfig::get('spedizione_pronto_soglia', 300);
+        $perc = (float) AppConfig::get('spedizione_pronto_perc', 5);
+
+        return round($subtotale >= $soglia ? $subtotale * $perc / 100 : $fissa, 2);
+    }
+
     public function minOrderAmount(): float
     {
         return (float) AppConfig::get('importo_minimo_ordine', (float) env('BIZ_MIN_ORDER_AMOUNT', 0));
