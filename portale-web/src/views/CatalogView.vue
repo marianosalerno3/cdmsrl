@@ -12,6 +12,7 @@ const { filters, load: loadConfig, state: cfgState } = useConfig()
 const { selected } = useCustomer()
 
 const search = ref(localStorage.getItem('catalog_search') || '')
+const line = ref(localStorage.getItem('catalog_line') || '')
 const category = ref(localStorage.getItem('catalog_category') || '')
 const season = ref(localStorage.getItem('catalog_season') || '')
 const page = ref(Number(localStorage.getItem('catalog_page')) || 1)
@@ -29,7 +30,7 @@ watch(search, () => {
     fetch()
   }, 350)
 })
-watch([category, season], () => {
+watch([line, category, season], () => {
   page.value = 1
   fetch()
 })
@@ -37,6 +38,7 @@ watch(() => selected.value?.id, () => fetch())
 
 function persist() {
   localStorage.setItem('catalog_search', search.value)
+  localStorage.setItem('catalog_line', line.value)
   localStorage.setItem('catalog_category', category.value)
   localStorage.setItem('catalog_season', season.value)
   localStorage.setItem('catalog_page', String(page.value))
@@ -54,6 +56,7 @@ async function fetch() {
     const { data } = await api.get('/products', {
       params: {
         search: search.value || undefined,
+        line: line.value || undefined,
         category: category.value || undefined,
         season: season.value || undefined,
         page: page.value,
@@ -93,8 +96,12 @@ onMounted(async () => {
     <div class="card space-y-4 p-4">
       <CustomerSelect />
 
-      <div class="grid gap-3 sm:grid-cols-3">
+      <div class="grid gap-3 sm:grid-cols-4">
         <input v-model="search" class="field" placeholder="Cerca per nome o codice…" />
+        <select v-model="line" class="field">
+          <option value="">Tutte le linee</option>
+          <option v-for="l in filters.lines" :key="l" :value="l">{{ l }}</option>
+        </select>
         <select v-model="category" class="field">
           <option value="">Tutte le categorie</option>
           <option v-for="c in filters.categories" :key="c" :value="c">{{ c }}</option>

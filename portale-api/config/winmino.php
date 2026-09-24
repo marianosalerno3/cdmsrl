@@ -28,18 +28,18 @@ return [
     'decimal_separator' => '.',
 
     // Timeout HTTP (secondi) e retry
-    'http_timeout' => 30,
+    'http_timeout' => (int) env('WINMINO_HTTP_TIMEOUT', 120), // GetArticoli pesa ~6,5 MB e impiega 20–40 s
     'http_retries' => 2,
     'http_retry_sleep_ms' => 800,
 
     // Import catalogo WinMino → portale: SOLO ciò che CDM decide di portare sul portale.
     'import' => [
-        // coppie LINEA:STAGIONE (codici WinMino), separate da virgola. Es. "CG:PE27,CG:AI27".
-        // Vuoto = non importa nessun articolo.
-        'selezioni' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_IMPORT_SELEZIONI', 'CG:PE27'))))),
+        // selezioni LINEA:STAGIONE[:LISTINO] (codici WinMino), separate da virgola.
+        // Es. "CG:PE27:CLARAG,OC:PE27:OT". Senza LISTINO vale `listino_base`. Vuoto = non importa nulla.
+        'selezioni' => array_values(array_filter(array_map('trim', explode(',', (string) env('WINMINO_IMPORT_SELEZIONI', 'CG:PE27:CLARAG,OC:PE27:OT'))))),
 
-        // Listino prezzi base (uno solo): il portale applica poi i ricarichi (plus5 ecc.).
-        // Gli articoli senza prezzo in questo listino NON vengono importati.
+        // Listino di default per le selezioni che non ne indicano uno; il portale applica poi i ricarichi (plus5 ecc.).
+        // Gli articoli senza prezzo nel listino della loro selezione NON vengono importati.
         'listino_base' => env('WINMINO_LISTINO_BASE', 'CLARAG'),
 
         // Depositi da cui leggere la giacenza (codici WinMino, virgola). Se più di uno vengono sommati;

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Linea;
 use App\Models\Categoria;
 use App\Models\Colore;
 use App\Models\Prodotto;
@@ -16,9 +17,10 @@ use Illuminate\Support\Facades\DB;
  * Import prodotti/varianti/prezzi/giacenze da WinMino nel portale.
  * WinMino → portale → (poi) Shopify B2C.
  *
- * Importa SOLO ciò che CDM sceglie di portare sul portale: le coppie LINEA:STAGIONE
- * di `config('winmino.import.selezioni')` (es. "CG:PE27" = Clara G, Primavera/Estate 2027).
- * Gli articoli senza prezzo nel listino base (`winmino.import.listino_base`) vengono esclusi.
+ * Importa SOLO ciò che CDM sceglie di portare sul portale: le selezioni LINEA:STAGIONE[:LISTINO]
+ * di `config('winmino.import.selezioni')` (es. "CG:PE27:CLARAG" = Clara G, Primavera/Estate 2027,
+ * prezzi dal listino CLARAG; senza listino si usa `winmino.import.listino_base`).
+ * Gli articoli senza prezzo nel listino della loro selezione vengono esclusi.
  *
  * Campi WinMino verificati su risposte reali (GET, formato JSO):
  *  - GetArticoli:            CODICE, DESCRIZIONE, COMPOSIZIONE, CODLINEA, CODSTAGIONE,
@@ -47,19 +49,18 @@ class SyncProdotti extends Command
             return self::SUCCESS;
         }
 
-        $selezioni = $this->selezioni();
+        $selezioni = $this->selezioni((string) config('winmino.import.listino_base'));
         if ($selezioni === []) {
             $this->warn('Nessuna selezione da importare (WINMINO_IMPORT_SELEZIONI, es. "CG:PE27"). Skip.');
 
             return self::SUCCESS;
         }
 
-        $listino = (string) config('winmino.import.listino_base');
         $depositi = array_map('strtoupper', (array) config('winmino.import.depositi', []));
         $dry = (bool) $this->option('dry-run');
         $driver = $erp->driver();
 
-        $this->info('Selezioni: '.implode(', ', array_map(fn ($s) => "{$s[0]}:{$s[1]}", $selezioni))." · listino base: {$listino}".($dry ? ' · DRY-RUN' : ''));
+        $this->info('Selezioni: '.implode(', ', array_map(fn ($s) => "{$s[0]}:{$s[1]} (listino {$s[2]})", $selezioni)).($dry ? ' · DRY-RUN' : ''));
 
         // 1. anagrafiche di supporto (nomi leggibili)
         $stagioni = $this->mappa($driver->getStagioni(), 'CODSTAGIONE', 'NOMESTAGIONE');
@@ -68,23 +69,31 @@ class SyncProdotti extends Command
         $coloriWm = collect($driver->getColori())->keyBy(fn ($r) => (string) $r['CODICE']);
 
         // 2. articoli delle selezioni (filtrati in fase di decodifica: GetArticoli ha ~25k righe)
-        $set = collect($selezioni)->mapWithKeys(fn ($s) => ["{$s[0]}|{$s[1]}" => true])->all();
+        $set = collect($selezioni)->mapWithKeys(fn ($s) => ["{$s[0]}|{$s[1]}" => $s[2]])->all();
         $articoli = $driver->getArticoli(null, fn (array $r) => isset($set[($r['CODLINEA'] ?? '').'|'.($r['CODSTAGIONE'] ?? '')]));
         $this->info(count($articoli).' articoli nelle selezioni');
 
-        // 3. prezzi dal listino base
+        // 3. prezzi: un listino per selezione (ogni articolo prende il prezzo del listino della sua selezione)
         $prezzi = [];
-        foreach ($driver->getListiniPrezzi($listino) as $r) {
-            if (($r['CODLISTINO'] ?? null) === $listino && ($r['PREZZO'] ?? 0) > 0) {
-                $prezzi[(string) $r['CODARTICOLO']] = round((float) $r['PREZZO'], 2);
+        foreach (array_unique(array_column($selezioni, 2)) as $listino) {
+            foreach ($driver->getListiniPrezzi($listino) as $r) {
+                if (($r['CODLISTINO'] ?? null) === $listino && ($r['PREZZO'] ?? 0) > 0) {
+                    $prezzi[$listino][(string) $r['CODARTICOLO']] = round((float) $r['PREZZO'], 2);
+                }
             }
         }
 
-        $conPrezzo = array_values(array_filter($articoli, fn ($a) => isset($prezzi[$a['CODICE']])));
-        $senzaPrezzo = array_values(array_filter($articoli, fn ($a) => ! isset($prezzi[$a['CODICE']])));
+        foreach ($articoli as &$a) {
+            $a['_LISTINO'] = $set[$a['CODLINEA'].'|'.$a['CODSTAGIONE']];
+            $a['_PREZZO'] = $prezzi[$a['_LISTINO']][$a['CODICE']] ?? null;
+        }
+        unset($a);
+
+        $conPrezzo = array_values(array_filter($articoli, fn ($a) => $a['_PREZZO'] !== null));
+        $senzaPrezzo = array_values(array_filter($articoli, fn ($a) => $a['_PREZZO'] === null));
         if ($senzaPrezzo !== []) {
-            $this->warn(count($senzaPrezzo)." articoli senza prezzo nel listino {$listino}: ESCLUSI");
-            $this->line('  '.implode(', ', array_column($senzaPrezzo, 'CODICE')));
+            $this->warn(count($senzaPrezzo).' articoli senza prezzo nel listino della loro selezione: ESCLUSI');
+            $this->line('  '.collect($senzaPrezzo)->map(fn ($a) => "{$a['CODICE']} ({$a['_LISTINO']})")->implode(', '));
         }
 
         // prodotti eliminati dal pannello: non si reimportano (e il codice è ancora occupato dal soft delete)
@@ -116,17 +125,18 @@ class SyncProdotti extends Command
                 $varianti = $driver->getBarcodeTaglieColori($codice);
                 $giacenze = $this->giacenze($driver->getGiacenze($codice), $depositi, $depositiVisti);
 
-                DB::transaction(function () use ($a, $codice, $varianti, $giacenze, $prezzi, $stagioni, $gruppi, $pacchetti, $coloriWm, &$stat) {
+                DB::transaction(function () use ($a, $codice, $varianti, $giacenze, $stagioni, $gruppi, $pacchetti, $coloriWm, &$stat) {
                     $prodotto = Prodotto::updateOrCreate(['codice' => $codice], [
                         'nome' => $a['DESCRIZIONE'] ?? $codice,
                         'descrizione' => $a['DESCRIZIONEWEB'] ?? null,
                         'composizione' => isset($a['COMPOSIZIONE']) ? trim((string) $a['COMPOSIZIONE']) : null,
                         'pacchetto' => $pacchetti[$a['CODPACCHETTO'] ?? ''] ?? null,
+                        'linea' => Linea::fromWinMino($a['CODLINEA'] ?? null),
                         'tipo' => 'variabile',
                         'unita' => $a['UM'] ?? null,
                         'categoria_id' => $this->categoriaId($gruppi[$a['CODGRUPPOMERCEOLOGICO'] ?? ''] ?? null),
                         'stagione_id' => $this->stagioneId($a['CODSTAGIONE'] ?? null, $stagioni),
-                        'prezzo_base' => $prezzi[$codice],
+                        'prezzo_base' => $a['_PREZZO'],
                         // 'attivo' NON toccato: è il flag "pubblica sul portale" gestito dal pannello
                     ]);
 
@@ -144,7 +154,7 @@ class SyncProdotti extends Command
                             'prodotto_id' => $prodotto->id,
                             'colore_id' => $this->coloreId($codColore, $coloriWm),
                             'taglia_id' => $this->tagliaId($taglia),
-                            'prezzo' => $prezzi[$codice],
+                            'prezzo' => $a['_PREZZO'],
                             'quantita' => $qta,
                             'barcode' => $v['BARCODE'] ?? null,
                         ]));
@@ -185,14 +195,14 @@ class SyncProdotti extends Command
 
     // ------------------------------------------------------------------ helpers
 
-    /** @return list<array{0:string,1:string}> [linea, stagione] */
-    private function selezioni(): array
+    /** @return list<array{0:string,1:string,2:string}> [linea, stagione, listino] */
+    private function selezioni(string $listinoDefault): array
     {
         $out = [];
         foreach ((array) config('winmino.import.selezioni', []) as $s) {
-            [$linea, $stagione] = array_pad(array_map('trim', explode(':', (string) $s, 2)), 2, '');
-            if ($linea !== '' && $stagione !== '') {
-                $out[] = [$linea, $stagione];
+            [$linea, $stagione, $listino] = array_pad(array_map('trim', explode(':', (string) $s, 3)), 3, '');
+            if ($linea !== '' && $stagione !== '' && ($listino !== '' || $listinoDefault !== '')) {
+                $out[] = [$linea, $stagione, $listino !== '' ? $listino : $listinoDefault];
             }
         }
 

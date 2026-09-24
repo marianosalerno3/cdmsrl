@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Linea;
 use App\Enums\ProdottoTipo;
 use Illuminate\Database\Eloquent\Concerns\HasVersion7Uuids;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ class Prodotto extends Model
     protected $table = 'prodotti';
 
     protected $fillable = [
-        'codice', 'nome', 'descrizione', 'composizione', 'tessuto', 'pacchetto',
+        'codice', 'nome', 'descrizione', 'composizione', 'tessuto', 'pacchetto', 'linea',
         'tipo', 'unita', 'categoria_id', 'stagione_id', 'genere_id',
         'prezzo_base', 'attivo', 'shopify_product_id',
     ];
@@ -26,6 +27,7 @@ class Prodotto extends Model
     {
         return [
             'tipo' => ProdottoTipo::class,
+            'linea' => Linea::class,
             'prezzo_base' => 'decimal:2',
             'attivo' => 'boolean',
         ];

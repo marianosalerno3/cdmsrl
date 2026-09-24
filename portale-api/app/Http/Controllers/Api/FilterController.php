@@ -9,13 +9,14 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * GET /api/filters — pubblico. Replica la risposta dell'originale:
- * { categories: [...], seasons: [...], packages: [...], fabrics: [...] }
+ * { lines: [...], categories: [...], seasons: [...], packages: [...], fabrics: [...] }
  */
 class FilterController extends Controller
 {
     public function index(): JsonResponse
     {
         return response()->json([
+            'lines' => array_column(\App\Enums\Linea::cases(), 'value'),
             'categories' => Categoria::orderBy('ordine')->orderBy('nome')->pluck('nome'),
             'seasons' => Stagione::orderByDesc('ordine')->orderBy('codice')->pluck('codice'),
             'packages' => \App\Models\Prodotto::query()

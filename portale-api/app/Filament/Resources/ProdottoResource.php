@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\Linea;
 use App\Enums\ProdottoTipo;
 use App\Filament\Resources\ProdottoResource\Pages;
 use App\Filament\Resources\ProdottoResource\RelationManagers\VariantiRelationManager;
@@ -105,6 +106,7 @@ class ProdottoResource extends Resource
                     ->label('')->circular()->stacked()->limit(1)->disk('public'),
                 Tables\Columns\TextColumn::make('codice')->searchable()->sortable()->weight('bold'),
                 Tables\Columns\TextColumn::make('nome')->searchable()->wrap()->limit(45),
+                Tables\Columns\TextColumn::make('linea')->label('Linea')->badge()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('categoria.nome')->label('Categoria')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('stagione.codice')->label('Stagione')->badge()->sortable(),
                 Tables\Columns\TextColumn::make('tipo')->badge(),
@@ -116,6 +118,7 @@ class ProdottoResource extends Resource
                 Tables\Columns\IconColumn::make('attivo')->boolean()->label('Pubbl.'),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('linea')->label('Linea')->options(Linea::class),
                 Tables\Filters\SelectFilter::make('stagione')->relationship('stagione', 'codice'),
                 Tables\Filters\SelectFilter::make('categoria')->relationship('categoria', 'nome'),
                 Tables\Filters\TernaryFilter::make('attivo')->label('Pubblicato'),

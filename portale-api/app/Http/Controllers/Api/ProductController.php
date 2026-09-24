@@ -26,6 +26,7 @@ class ProductController extends Controller
                     ->where('nome', 'like', "%{$term}%")
                     ->orWhere('codice', 'like', "%{$term}%"));
             })
+            ->when($request->string('line')->toString(), fn ($q, $line) => $q->where('linea', $line))
             ->when($request->string('category')->toString(), fn ($q, $cat) => $q
                 ->whereHas('categoria', fn ($q) => $q->where('nome', $cat)))
             ->when($request->string('season')->toString(), fn ($q, $s) => $q
