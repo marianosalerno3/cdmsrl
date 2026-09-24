@@ -16,9 +16,9 @@ class ListOrdiniB2B extends ListRecords
         return [
             'tutti' => Tab::make('Tutti gli Ordini'),
             'b2b' => Tab::make('Ordini B2B')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereNull('shopify_order_id')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('shopify_order_id')),
             'shopify' => Tab::make('Ordini Shopify')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereNotNull('shopify_order_id')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('shopify_order_id')),
         ];
     }
 }
