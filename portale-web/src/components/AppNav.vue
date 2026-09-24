@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/stores/auth'
 import { useCart } from '@/stores/cart'
 import { useCustomer } from '@/stores/customer'
+import { COMPANY_NAME } from '@/lib/brand'
 
 const router = useRouter()
 const { state: auth, logout } = useAuth()
@@ -29,7 +30,10 @@ async function onLogout() {
 <template>
   <header class="sticky top-0 z-20 border-b border-black/5 bg-canvas/80 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-      <RouterLink to="/dashboard" class="text-lg font-bold tracking-tight">Portale B2B</RouterLink>
+      <RouterLink to="/dashboard" class="flex flex-col leading-tight">
+        <span class="text-lg font-bold uppercase tracking-tight">{{ COMPANY_NAME }}</span>
+        <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-500">Portale Agenti</span>
+      </RouterLink>
 
       <nav class="ml-4 hidden items-center gap-1 md:flex">
         <RouterLink

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/stores/auth'
+import { COMPANY_NAME } from '@/lib/brand'
 import { useConfig } from '@/stores/config'
 import { api, errorMessage } from '@/lib/api'
 
@@ -44,7 +45,8 @@ async function submit() {
 <template>
   <div class="grid min-h-screen place-items-center p-4">
     <div class="card w-full max-w-md p-8">
-      <h1 class="text-center text-2xl font-bold tracking-tight">Portale Agenti B2B</h1>
+      <p class="text-center text-3xl font-extrabold uppercase tracking-tight">{{ COMPANY_NAME }}</p>
+      <h1 class="mt-1 text-center text-sm font-medium uppercase tracking-widest text-zinc-500">Portale Agenti B2B</h1>
       <p class="mt-1 text-center text-sm text-zinc-500">
         {{ mode === 'login' ? 'Accedi al tuo account' : 'Recupero password' }}
       </p>
