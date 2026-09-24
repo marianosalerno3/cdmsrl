@@ -25,6 +25,11 @@ class NullErpDriver implements ErpDriver
         return false;
     }
 
+    public function lastError(): ?string
+    {
+        return 'Nessun driver ERP configurato.';
+    }
+
     public function upsertCliente(Cliente $cliente): ErpResult
     {
         return $this->noop();

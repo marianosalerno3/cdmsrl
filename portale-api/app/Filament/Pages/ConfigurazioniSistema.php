@@ -130,10 +130,11 @@ class ConfigurazioniSistema extends Page implements HasForms
         $this->salva();
 
         try {
-            $ok = app(\App\Services\Erp\ErpManager::class)->driver()->test();
+            $driver = app(\App\Services\Erp\ErpManager::class)->driver();
+            $ok = $driver->test();
             $ok
                 ? Notification::make()->success()->title('ERP: connessione OK')->send()
-                : Notification::make()->danger()->title('ERP: connessione fallita')->body('Verifica base URL, credenziali e raggiungibilità del server.')->send();
+                : Notification::make()->danger()->title('ERP: connessione fallita')->body($driver->lastError() ?: 'Verifica base URL, credenziali e raggiungibilità del server.')->send();
         } catch (\Throwable $e) {
             Notification::make()->danger()->title('ERP: '.$e->getMessage())->send();
         }

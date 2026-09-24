@@ -24,6 +24,9 @@ interface ErpDriver
     /** Verifica connettività / credenziali. */
     public function test(): bool;
 
+    /** Motivo dell'ultimo `test()` fallito (null se OK o mai eseguito). */
+    public function lastError(): ?string;
+
     // --- scrittura (POST) ---
 
     public function upsertCliente(Cliente $cliente): ErpResult;

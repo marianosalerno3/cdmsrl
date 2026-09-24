@@ -38,15 +38,52 @@ class WinMinoDriver implements ErpDriver
         return 'winmino';
     }
 
+    private ?string $lastError = null;
+
     public function test(): bool
     {
+        $this->lastError = null;
+
         try {
             $this->client->get($this->moduleGet, 'GetPagamenti', [], $this->prefix);
 
             return true;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->lastError = $this->describeFailure($e);
+
             return false;
         }
+    }
+
+    public function lastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    /** Messaggio leggibile, senza mai includere credenziali. */
+    private function describeFailure(\Throwable $e): string
+    {
+        $status = match (true) {
+            $e instanceof \Illuminate\Http\Client\RequestException => $e->response->status(),
+            // DataSnapClient segnala l'errore HTTP come "GET <fn> fallita: HTTP <codice>"
+            $e instanceof ErpException && preg_match('/HTTP (\d{3})/', $e->getMessage(), $m) === 1 => (int) $m[1],
+            default => null,
+        };
+
+        if ($status !== null) {
+            return match (true) {
+                $status === 401 => 'HTTP 401: utente/password rifiutati dal server WinMino.',
+                $status === 403 => 'HTTP 403: accesso negato (utente non abilitato ai webservice?).',
+                $status === 404 => "HTTP 404: modulo '{$this->moduleGet}' o funzione non trovati.",
+                default => "HTTP {$status} dal server WinMino.",
+            };
+        }
+
+        if ($e instanceof \Illuminate\Http\Client\ConnectionException) {
+            return 'Server non raggiungibile (timeout o connessione rifiutata): '.strtok($e->getMessage(), "\n");
+        }
+
+        return get_class($e).': '.$e->getMessage();
     }
 
     // ---------------------------------------------------------------- POST
