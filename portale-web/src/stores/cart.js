@@ -34,10 +34,10 @@ export function useCart() {
   )
   // ordine programmato = almeno una riga di una stagione "programmata"
   const programmato = computed(() => state.items.some((i) => i.programmata))
-  // pronto: fissa fino alla soglia, da soglia in su % sul totale merce; programmato: spesa fissa
+  // pronto: fissa fino alla soglia, da soglia in su % sul totale merce; programmato: da definire (0)
   const shipping = computed(() => {
     if (!state.items.length) return 0
-    if (programmato.value) return Number(config.spese_spedizione || 0)
+    if (programmato.value) return 0 // ordine programmato: la spedizione la calcola il commerciale
     const soglia = Number(config.spedizione_pronto_soglia ?? 300)
     return subtotal.value >= soglia
       ? round2((subtotal.value * Number(config.spedizione_pronto_perc ?? 5)) / 100)

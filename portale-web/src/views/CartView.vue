@@ -155,10 +155,12 @@ onMounted(async () => {
         <div class="card space-y-2 p-4 text-sm">
           <div class="flex justify-between"><span>Subtotale</span><span>{{ money(cart.subtotal.value) }}</span></div>
           <div class="flex justify-between">
-            <span>Spese spedizione</span><span>{{ money(cart.shipping.value) }}</span>
+            <span>Spese spedizione</span>
+            <span v-if="cart.programmato.value">Da definire</span>
+            <span v-else>{{ money(cart.shipping.value) }}</span>
           </div>
           <p class="-mt-1 text-xs text-zinc-400">
-            <template v-if="cart.programmato.value">Ordine programmato: spedizione fissa.</template>
+            <template v-if="cart.programmato.value">Ordine programmato: la spedizione viene calcolata dal commerciale in fase di evasione.</template>
             <template v-else>
               Pronto: {{ money(config.spedizione_pronto_fissa) }} fino a {{ money(config.spedizione_pronto_soglia) }};
               da {{ money(config.spedizione_pronto_soglia) }} in su {{ config.spedizione_pronto_perc }}% sul totale ordine.

@@ -52,7 +52,8 @@ class ViewOrdineB2B extends ViewRecord
             ]),
             Section::make('Totali')->columns(4)->schema([
                 TextEntry::make('subtotale')->money('EUR'),
-                TextEntry::make('spese_spedizione')->money('EUR'),
+                TextEntry::make('spese_spedizione')->money('EUR')
+                    ->formatStateUsing(fn ($state, $record) => $record->programmato ? 'Da definire (ordine programmato)' : '€ '.number_format((float) $state, 2, ',', '.')),
                 TextEntry::make('iva_importo')->label('IVA')->money('EUR'),
                 TextEntry::make('totale')->money('EUR')->weight('bold')->size('lg'),
                 TextEntry::make('totale_pezzi')->label('Totale pezzi'),

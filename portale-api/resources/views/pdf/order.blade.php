@@ -68,7 +68,7 @@
 
     <table class="totali">
         <tr><td>Subtotale</td><td class="num">€ {{ number_format($ordine->subtotale, 2, ',', '.') }}</td></tr>
-        <tr><td>Spese spedizione</td><td class="num">€ {{ number_format($ordine->spese_spedizione, 2, ',', '.') }}</td></tr>
+        <tr><td>Spese spedizione</td><td class="num">@if($ordine->programmato) da definire @else € {{ number_format($ordine->spese_spedizione, 2, ',', '.') }} @endif</td></tr>
         <tr><td>IVA ({{ number_format($ordine->iva_perc, 0) }}%)</td><td class="num">€ {{ number_format($ordine->iva_importo, 2, ',', '.') }}</td></tr>
         <tr class="grand"><td>Totale ordine</td><td class="num">€ {{ number_format($ordine->totale, 2, ',', '.') }}</td></tr>
     </table>

@@ -35,12 +35,12 @@ class PriceService
      * Spese di spedizione di un ordine.
      *  - PRONTO (non programmato): spesa fissa fino alla soglia, oltre (soglia inclusa) una percentuale
      *    sul totale merce dell'ordine (imponibile prima di spedizione e IVA). Default 10 € fino a 300 €, da 300 € 5%.
-     *  - PROGRAMMATO: spesa fissa `spese_spedizione`.
+     *  - PROGRAMMATO: nessuna spesa a carrello (0): la calcola il commerciale quando evade l'ordine.
      */
     public function shippingFor(float $subtotale, bool $programmato): float
     {
         if ($programmato) {
-            return round($this->shippingCost(), 2);
+            return 0.0;
         }
 
         $fissa = (float) AppConfig::get('spedizione_pronto_fissa', 10);
