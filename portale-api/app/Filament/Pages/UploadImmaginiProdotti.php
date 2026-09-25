@@ -78,7 +78,10 @@ class UploadImmaginiProdotti extends Page implements HasForms
 
     public function associa(): void
     {
-        $paths = collect($this->form->getState()['files'] ?? []);
+        // davanti prima di dietro: le foto con "die" nel nome vanno in coda (l'ordine fissa quale compare in catalogo)
+        $paths = collect($this->form->getState()['files'] ?? [])
+            ->sortBy(fn ($p) => stripos(pathinfo($p, PATHINFO_FILENAME), 'die') !== false ? 1 : 0)
+            ->values();
 
         if ($paths->isEmpty()) {
             Notification::make()->warning()->title('Nessun file caricato')->send();
@@ -166,7 +169,7 @@ class UploadImmaginiProdotti extends Page implements HasForms
     {
         $chunks = preg_split('/[\/\-_\s]+/', $code, -1, PREG_SPLIT_NO_EMPTY);
 
-        return '/(?<![a-z0-9])'.implode('[\/\-_\s]*', array_map(fn ($c) => preg_quote($c, '/'), $chunks)).'(?![a-z0-9])/i';
+        return '/(?:(?<![a-z0-9])|(?<=dav|die))'.implode('[\/\-_\s]*', array_map(fn ($c) => preg_quote($c, '/'), $chunks)).'(?=$|[^a-z0-9]|dav|die)/i';
     }
 
     private static function matchByNameCode(string $base, $perNome): ?string
