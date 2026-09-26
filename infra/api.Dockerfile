@@ -10,7 +10,7 @@ RUN composer install \
       --no-dev --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs
 
 # ---- stage 2: runtime ----
-FROM serversideup/php:8.3-fpm-nginx
+FROM serversideup/php:8.4-fpm-nginx
 
 ENV PHP_OPCACHE_ENABLE=1 \
     SSL_MODE=off \
