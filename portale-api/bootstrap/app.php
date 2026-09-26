@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // API stateless con Bearer token (Sanctum). Nessun EnsureFrontendRequestsAreStateful:
         // la SPA usa personal access token in localStorage, non i cookie.
+        // In produzione l'app sta dietro Caddy (TLS termina li'): fidati di X-Forwarded-*
+        // cosi' url()/asset()/redirect generano https e non http (mixed content nel pannello).
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'agente.attivo' => EnsureAgenteAttivo::class,
         ]);
