@@ -1,0 +1,38 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# ----------------------------------------------------------------------
+#  SPA agenti  —  https://<APP_DOMAIN>   (file statici serviti da Caddy)
+# ----------------------------------------------------------------------
+{$APP_DOMAIN} {
+	encode zstd gzip
+	root * /srv/web
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-store"
+
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+# ----------------------------------------------------------------------
+#  API + pannello Filament  —  https://<API_DOMAIN>
+#  Reverse proxy verso il container api (nginx + php-fpm interni).
+# ----------------------------------------------------------------------
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8080
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
