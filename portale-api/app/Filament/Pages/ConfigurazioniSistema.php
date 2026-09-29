@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\AppConfig;
 use App\Settings\IntegrationSettings;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
@@ -45,6 +46,7 @@ class ConfigurazioniSistema extends Page implements HasForms
             'erp_username' => $s->erp_username,
             'erp_password' => $s->erp_password,
             'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
+            'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
         ]);
     }
 
@@ -59,6 +61,10 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('shopify_shop_domain')->label('Shop Domain')
                             ->helperText('es. mio-shop.myshopify.com — senza https://'),
                         TextInput::make('shopify_access_token')->label('Access Token')->password()->revealable(),
+                        TextInput::make('shopify_markup_perc')->label('Ricarico B2C (%)')
+                            ->numeric()->default(0)->suffix('%')
+                            ->helperText('Applicato sopra il prezzo di listino B2B quando un prodotto viene inviato a Shopify. Es. 100 = prezzo raddoppiato, 0 = nessun ricarico.')
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Stripe (Pagamenti B2B)')
@@ -95,13 +101,16 @@ class ConfigurazioniSistema extends Page implements HasForms
     public function salva(): void
     {
         $s = app(IntegrationSettings::class);
+        $state = $this->form->getState();
 
-        foreach ($this->form->getState() as $key => $value) {
+        foreach ($state as $key => $value) {
             if (property_exists($s, $key)) {
                 $s->{$key} = $value;
             }
         }
         $s->save();
+
+        AppConfig::put('shopify_markup_perc', (float) ($state['shopify_markup_perc'] ?? 0));
 
         Notification::make()->success()->title('Configurazioni salvate')->send();
     }

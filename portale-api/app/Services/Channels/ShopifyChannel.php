@@ -138,6 +138,10 @@ class ShopifyChannel implements EcommerceChannel
 
     private function productPayload(Prodotto $p): array
     {
+        // Ricarico B2C sul prezzo di listino B2B (impostabile in Configurazioni Sistema).
+        // Es. 100 = raddoppia il prezzo; 0 = nessun ricarico, stesso prezzo degli agenti.
+        $markup = 1 + ((float) \App\Models\AppConfig::get('shopify_markup_perc', 0)) / 100;
+
         return [
             'title' => $p->nome,
             'body_html' => $p->descrizione ?? '',
@@ -149,7 +153,7 @@ class ShopifyChannel implements EcommerceChannel
                 'option1' => $v->taglia?->nome ?: 'UNICA',
                 'option2' => $v->colore?->nome ?: 'UNICO',
                 'sku' => $v->sku,
-                'price' => number_format((float) $v->prezzo, 2, '.', ''),
+                'price' => number_format(round(((float) $v->prezzo) * $markup, 2), 2, '.', ''),
                 'inventory_management' => 'shopify',
                 'inventory_quantity' => (int) $v->quantita,
             ])->values()->all(),
