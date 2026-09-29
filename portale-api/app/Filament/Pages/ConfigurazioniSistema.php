@@ -165,6 +165,15 @@ class ConfigurazioniSistema extends Page implements HasForms
         Notification::make()->success()->title('Invio giacenze a Shopify in coda')->send();
     }
 
+    /** Invia a Shopify anagrafica completa: nome, prezzo (con ricarico B2C), varianti, immagini, giacenze. */
+    public function inviaCatalogoCompletoShopify(): void
+    {
+        Artisan::queue('sync:giacenze', ['--full' => true]);
+        Notification::make()->success()->title('Invio catalogo completo a Shopify in coda')
+            ->body('Prezzo con ricarico, immagini e giacenze per tutti i prodotti attivi. Può richiedere diversi minuti.')
+            ->send();
+    }
+
     public function sincronizzaClienti(): void
     {
         Artisan::queue('sync:clienti');

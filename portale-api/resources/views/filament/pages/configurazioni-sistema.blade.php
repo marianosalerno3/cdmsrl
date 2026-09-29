@@ -23,6 +23,10 @@
                 Invia Giacenze a Shopify
             </x-filament::button>
 
+            <x-filament::button color="warning" wire:click="inviaCatalogoCompletoShopify" icon="heroicon-o-photo">
+                Invia Catalogo Completo a Shopify
+            </x-filament::button>
+
             <x-filament::button color="info" wire:click="sincronizzaClienti" icon="heroicon-o-users">
                 Sincronizza Clienti (da WinMino)
             </x-filament::button>
