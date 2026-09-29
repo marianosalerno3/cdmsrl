@@ -15,12 +15,16 @@
                 Test ERP
             </x-filament::button>
 
-            <x-filament::button color="info" wire:click="sincronizzaProdotti" icon="heroicon-o-arrow-path">
-                Sincronizza Prodotti e Giacenze
+            <x-filament::button color="success" wire:click="importaDaWinmino" icon="heroicon-o-cloud-arrow-down">
+                Importa da WinMino
+            </x-filament::button>
+
+            <x-filament::button color="info" wire:click="inviaGiacenzeShopify" icon="heroicon-o-arrow-up-tray">
+                Invia Giacenze a Shopify
             </x-filament::button>
 
             <x-filament::button color="info" wire:click="sincronizzaClienti" icon="heroicon-o-users">
-                Sincronizza Clienti
+                Sincronizza Clienti (da WinMino)
             </x-filament::button>
         </div>
     </form>

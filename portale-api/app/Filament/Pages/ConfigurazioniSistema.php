@@ -149,10 +149,20 @@ class ConfigurazioniSistema extends Page implements HasForms
         }
     }
 
-    public function sincronizzaProdotti(): void
+    /** Importa/aggiorna prodotti, varianti, prezzi e giacenze da WinMino (solo le selezioni configurate). */
+    public function importaDaWinmino(): void
+    {
+        Artisan::queue('sync:prodotti');
+        Notification::make()->success()->title('Importazione da WinMino in coda')
+            ->body('Prodotti, prezzi e giacenze delle linee/stagioni configurate. Richiede qualche minuto.')
+            ->send();
+    }
+
+    /** Invia a Shopify le sole giacenze dei prodotti già presenti sul portale (non importa nulla da WinMino). */
+    public function inviaGiacenzeShopify(): void
     {
         Artisan::queue('sync:giacenze');
-        Notification::make()->success()->title('Sincronizzazione prodotti/giacenze in coda')->send();
+        Notification::make()->success()->title('Invio giacenze a Shopify in coda')->send();
     }
 
     public function sincronizzaClienti(): void
