@@ -146,7 +146,8 @@ class ShopifyChannel implements EcommerceChannel
             'title' => $p->nome,
             'body_html' => $p->descrizione ?? '',
             'product_type' => $p->categoria?->nome,
-            'tags' => collect([$p->stagione?->codice, $p->genere?->nome])->filter()->implode(', '),
+            // Tag usati per le collezioni Shopify per linea/stagione (es. "Linea: Clara G", "PE27").
+            'tags' => collect([$p->linea?->value ? "Linea: {$p->linea->value}" : null, $p->stagione?->codice, $p->genere?->nome])->filter()->implode(', '),
             'status' => $p->attivo ? 'active' : 'draft',
             'options' => [['name' => 'Taglia'], ['name' => 'Colore']],
             'variants' => $p->varianti->map(fn (VarianteProdotto $v) => [
