@@ -70,6 +70,7 @@ class UploadImmaginiProdotti extends Page implements HasForms
                     ->maxFiles(200)
                     ->directory('import-immagini')
                     ->disk('public')
+                    ->preserveFilenames() // l'abbinamento legge il codice dal nome originale del file
                     ->reorderable(false)
                     ->required(),
             ])
@@ -111,26 +112,24 @@ class UploadImmaginiProdotti extends Page implements HasForms
             [$key, $suffix] = self::splitSuffix($base);
             $norm = self::norm($key);
 
+            // con i nomi originali, ricaricare lo stesso file lo sovrascrive: niente righe duplicate
             if ($vid = $varianti[$norm] ?? null) {
-                VarianteImmagine::create([
-                    'variante_prodotto_id' => $vid,
-                    'percorso' => $path,
-                    'ordine' => VarianteImmagine::where('variante_prodotto_id', $vid)->max('ordine') + 1,
-                ]);
+                VarianteImmagine::firstOrCreate(
+                    ['variante_prodotto_id' => $vid, 'percorso' => $path],
+                    ['ordine' => VarianteImmagine::where('variante_prodotto_id', $vid)->max('ordine') + 1],
+                );
                 $ok++;
             } elseif ($pid = $prodotti[$norm] ?? null) {
-                ProdottoImmagine::create([
-                    'prodotto_id' => $pid,
-                    'percorso' => $path,
-                    'ordine' => ProdottoImmagine::where('prodotto_id', $pid)->max('ordine') + 1,
-                ]);
+                ProdottoImmagine::firstOrCreate(
+                    ['prodotto_id' => $pid, 'percorso' => $path],
+                    ['ordine' => ProdottoImmagine::where('prodotto_id', $pid)->max('ordine') + 1],
+                );
                 $ok++;
             } elseif ($pid = self::matchByNameCode($base, $perNome)) {
-                ProdottoImmagine::create([
-                    'prodotto_id' => $pid,
-                    'percorso' => $path,
-                    'ordine' => ProdottoImmagine::where('prodotto_id', $pid)->max('ordine') + 1,
-                ]);
+                ProdottoImmagine::firstOrCreate(
+                    ['prodotto_id' => $pid, 'percorso' => $path],
+                    ['ordine' => ProdottoImmagine::where('prodotto_id', $pid)->max('ordine') + 1],
+                );
                 $ok++;
             } else {
                 Storage::disk('public')->delete($path);
