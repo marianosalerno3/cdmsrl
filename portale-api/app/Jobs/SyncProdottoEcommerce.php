@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Prodotto;
 use App\Services\Channels\ChannelManager;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -18,8 +19,11 @@ use Illuminate\Queue\SerializesModels;
  *   'inventory' → pushInventory (solo giacenze, più rapido)
  *
  * channel: null = tutti i canali abilitati; oppure 'shopify'.
+ *
+ * Unico per prodotto+canale+modo finche' non parte: un import salva decine di varianti dello stesso prodotto
+ * e senza questo accoderebbe un job per ogni salvataggio (la coda arrivava a decine di migliaia di job).
  */
-class SyncProdottoEcommerce implements ShouldQueue
+class SyncProdottoEcommerce implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -30,11 +34,22 @@ class SyncProdottoEcommerce implements ShouldQueue
 
     public int $backoff = 20;
 
+    /** Se un job resta bloccato, dopo 1h puo' essere riaccodato. */
+    public int $uniqueFor = 3600;
+
+    /** Push con immagini + throttling Shopify (2 chiamate/s): il default di 60s va stretto. */
+    public int $timeout = 240;
+
     public function __construct(
         public string $prodottoId,
         public ?string $channel = null,
         public string $mode = 'full',
     ) {}
+
+    public function uniqueId(): string
+    {
+        return "{$this->prodottoId}:".($this->channel ?? 'all').":{$this->mode}";
+    }
 
     public function handle(ChannelManager $manager): void
     {
