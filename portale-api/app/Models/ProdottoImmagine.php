@@ -22,6 +22,7 @@ class ProdottoImmagine extends Model
 
     public function getUrlAttribute(): string
     {
-        return Storage::disk('public')->url($this->percorso);
+        // i nomi file possono contenere spazi ("OC405-02 DAV_2.jpg"): senza codifica Shopify risponde "Image URL is invalid"
+        return Storage::disk('public')->url(implode('/', array_map('rawurlencode', explode('/', $this->percorso))));
     }
 }

@@ -22,6 +22,7 @@ class VarianteImmagine extends Model
 
     public function getUrlAttribute(): string
     {
-        return Storage::disk('public')->url($this->percorso);
+        // i nomi file possono contenere spazi: l'URL va codificato, altrimenti Shopify lo rifiuta
+        return Storage::disk('public')->url(implode('/', array_map('rawurlencode', explode('/', $this->percorso))));
     }
 }
