@@ -19,4 +19,7 @@ return [
     // (il commerciale lo prende in carico e lo carica manualmente su WinMino).
     // Più indirizzi separati da virgola.
     'backoffice_email' => env('BACKOFFICE_EMAIL', ''),
+
+    // Indirizzo a cui arrivano le risposte alle email del portale (il mittente tecnico non ha una casella).
+    'mail_reply_to' => env('MAIL_REPLY_TO', ''),
 ];

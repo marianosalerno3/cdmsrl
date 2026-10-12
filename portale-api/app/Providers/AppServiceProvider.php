@@ -7,6 +7,7 @@ use App\Observers\VarianteProdottoObserver;
 use App\Services\Channels\ChannelManager;
 use App\Services\Erp\ErpManager;
 use App\Services\PriceService;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,5 +22,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         VarianteProdotto::observe(VarianteProdottoObserver::class);
+
+        // le risposte alle email del portale vanno al backoffice, non al mittente tecnico (senza casella)
+        if ($replyTo = config('portale.mail_reply_to')) {
+            Mail::alwaysReplyTo($replyTo, config('mail.from.name'));
+        }
     }
 }
