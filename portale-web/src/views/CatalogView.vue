@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { api, errorMessage } from '@/lib/api'
 import { useConfig } from '@/stores/config'
 import { useCustomer } from '@/stores/customer'
+import { useAuth } from '@/stores/auth'
 import ProductCard from '@/components/ProductCard.vue'
 import CustomerSelect from '@/components/CustomerSelect.vue'
 import Spinner from '@/components/Spinner.vue'
@@ -10,6 +11,7 @@ import EmptyState from '@/components/EmptyState.vue'
 
 const { filters, load: loadConfig, state: cfgState } = useConfig()
 const { selected } = useCustomer()
+const { isCliente } = useAuth()
 
 const search = ref(localStorage.getItem('catalog_search') || '')
 const line = ref(localStorage.getItem('catalog_line') || '')
@@ -113,8 +115,9 @@ onMounted(async () => {
       </div>
     </div>
 
+    <Spinner v-if="!selected && isCliente" label="Carico il catalogo…" />
     <EmptyState
-      v-if="!selected"
+      v-else-if="!selected"
       title="Seleziona un cliente"
       subtitle="Scegli il cliente per vedere il catalogo con i prezzi del suo listino."
     />

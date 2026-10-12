@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAgenteAttivo;
+use App\Http\Middleware\EnsureUtenteAttivo;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,7 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'agente.attivo' => EnsureAgenteAttivo::class,
+            'agente.attivo' => EnsureAgenteAttivo::class,   // solo agenti
+            'utente.attivo' => EnsureUtenteAttivo::class,   // agenti e clienti approvati
         ]);
 
         $middleware->api(prepend: [

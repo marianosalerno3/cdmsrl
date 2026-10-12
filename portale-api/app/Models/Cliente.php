@@ -6,13 +6,19 @@ use App\Enums\ClienteTipo;
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
 use Illuminate\Database\Eloquent\Concerns\HasVersion7Uuids;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
-class Cliente extends Model
+/**
+ * Cliente B2B. Dopo registrazione + approvazione admin si autentica sull'API
+ * (Sanctum personal access token) e ordina da solo; gli agenti continuano a ordinare per i propri clienti.
+ */
+class Cliente extends Authenticatable
 {
+    use HasApiTokens;
     use HasVersion7Uuids;
     use SoftDeletes;
 
@@ -20,25 +26,37 @@ class Cliente extends Model
 
     protected $fillable = [
         'agente_id', 'codice_cliente_erp', 'tipo',
-        'ragione_sociale', 'nome', 'cognome', 'email', 'telefono',
-        'stato_richiesta', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
+        'ragione_sociale', 'nome', 'cognome', 'email', 'password', 'telefono',
+        'stato_richiesta', 'approvato_at', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
         'tipo_listino', 'attivo', 'contrassegno_abilitato',
         'indirizzo', 'cap', 'citta', 'provincia', 'nazione',
         'criterio_sconto', 'zona', 'nazione_erp', 'tipologia_fe', 'tipologia_codice_fe',
         'documenti', 'sincronizzato_erp_at',
     ];
 
+    protected $hidden = ['password', 'remember_token'];
+
     protected function casts(): array
     {
         return [
+            'password' => 'hashed',
             'tipo' => ClienteTipo::class,
             'stato_richiesta' => RichiestaStato::class,
+            'approvato_at' => 'datetime',
             'tipo_listino' => ListinoTipo::class,
             'attivo' => 'boolean',
             'contrassegno_abilitato' => 'boolean',
             'documenti' => 'array',
             'sincronizzato_erp_at' => 'datetime',
         ];
+    }
+
+    /** Può accedere al portale: ha una password, è approvato e attivo. */
+    public function puoAccedere(): bool
+    {
+        return filled($this->password)
+            && $this->attivo
+            && $this->stato_richiesta === RichiestaStato::Approvato;
     }
 
     public function agente(): BelongsTo

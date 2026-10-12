@@ -6,13 +6,17 @@ use App\Enums\RichiestaStato;
 use App\Http\Controllers\Controller;
 use App\Models\Agente;
 use App\Models\Cliente;
+use App\Mail\NuovaRegistrazioneB2BMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 /**
  * POST /api/register-b2b  (multipart/form-data)
  * Registrazione autonoma di un nuovo cliente B2B con upload documenti
- * (visura, documento identità, ecc.). Crea un Cliente in stato "in_attesa".
+ * (visura, documento identità, ecc.). Crea un Cliente in stato "in_attesa" con la password scelta:
+ * non può entrare finché l'admin non lo approva dal pannello (Clienti → Approva).
  */
 class RegisterB2BController extends Controller
 {
@@ -25,6 +29,7 @@ class RegisterB2BController extends Controller
             'codice_sdi' => ['nullable', 'string', 'max:12'],
             'pec' => ['nullable', 'email'],
             'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'telefono' => ['nullable', 'string', 'max:40'],
             'indirizzo' => ['required', 'string', 'max:255'],
             'cap' => ['required', 'string', 'max:16'],
@@ -34,6 +39,23 @@ class RegisterB2BController extends Controller
             'documenti' => ['nullable', 'array', 'max:6'],
             'documenti.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:8192'],
         ]);
+
+        $email = mb_strtolower(trim($data['email']));
+        $piva = strtoupper(preg_replace('/\s+/', '', $data['partita_iva']));
+
+        // l'email è il login: non può coincidere con un agente o con un altro cliente che ha già l'accesso
+        if (Agente::where('email', $email)->exists() || Cliente::where('email', $email)->whereNotNull('password')->exists()) {
+            throw ValidationException::withMessages([
+                'email' => 'Questa email è già registrata. Accedi oppure usa un altro indirizzo.',
+            ]);
+        }
+
+        // un cliente già censito (anche da ERP) non si registra due volte: l'accesso lo abilita il backoffice
+        if (Cliente::where('partita_iva', $piva)->exists()) {
+            throw ValidationException::withMessages([
+                'partita_iva' => 'Questa partita IVA è già presente nei nostri archivi. Contatta il backoffice per attivare l\'accesso.',
+            ]);
+        }
 
         $paths = [];
         foreach ($request->file('documenti', []) as $file) {
@@ -48,11 +70,12 @@ class RegisterB2BController extends Controller
             'agente_id' => $agente?->id,
             'tipo' => 'b2b',
             'ragione_sociale' => $data['ragione_sociale'],
-            'partita_iva' => $data['partita_iva'],
+            'partita_iva' => $piva,
             'codice_fiscale' => $data['codice_fiscale'] ?? null,
             'codice_sdi' => $data['codice_sdi'] ?? null,
             'pec' => $data['pec'] ?? null,
-            'email' => $data['email'],
+            'email' => $email,
+            'password' => $data['password'],
             'telefono' => $data['telefono'] ?? null,
             'indirizzo' => $data['indirizzo'],
             'cap' => $data['cap'],
@@ -63,8 +86,13 @@ class RegisterB2BController extends Controller
             'documenti' => $paths,
         ]);
 
+        // avvisa il backoffice: c'è una richiesta da approvare
+        if ($destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))))) {
+            Mail::to($destinatari)->queue(new NuovaRegistrazioneB2BMail($cliente));
+        }
+
         return response()->json([
-            'message' => 'Registrazione inviata. Verrai contattato dopo la verifica.',
+            'message' => 'Registrazione inviata. Potrai accedere appena verificheremo i tuoi dati.',
             'data' => ['id' => $cliente->id],
         ], 201);
     }

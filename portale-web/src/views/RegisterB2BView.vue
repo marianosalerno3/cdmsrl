@@ -9,6 +9,8 @@ const form = ref({
   codice_sdi: '',
   pec: '',
   email: '',
+  password: '',
+  password_confirmation: '',
   telefono: '',
   indirizzo: '',
   cap: '',
@@ -27,6 +29,10 @@ function onFiles(e) {
 
 async function submit() {
   error.value = ''
+  if (form.value.password !== form.value.password_confirmation) {
+    error.value = 'Le due password non coincidono.'
+    return
+  }
   loading.value = true
   try {
     const fd = new FormData()
@@ -47,7 +53,8 @@ async function submit() {
     <div v-if="done" class="card p-8 text-center">
       <h1 class="text-xl font-bold">Registrazione inviata</h1>
       <p class="mt-2 text-sm text-zinc-500">
-        Verrai contattato dopo la verifica dei dati e dei documenti.
+        Verificheremo i tuoi dati e i documenti. Quando la registrazione sarà approvata potrai accedere con
+        l'email e la password che hai scelto: ti avviseremo via email.
       </p>
       <RouterLink to="/login" class="btn-primary mt-6">Torna al login</RouterLink>
     </div>
@@ -76,6 +83,28 @@ async function submit() {
         <div>
           <label class="label">Telefono</label>
           <input v-model="form.telefono" class="field" />
+        </div>
+        <div>
+          <label class="label">Password * (min. 8 caratteri)</label>
+          <input
+            v-model="form.password"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="field"
+          />
+        </div>
+        <div>
+          <label class="label">Conferma password *</label>
+          <input
+            v-model="form.password_confirmation"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="field"
+          />
         </div>
         <div>
           <label class="label">PEC</label>

@@ -15,11 +15,15 @@ use Stripe\Webhook;
  */
 class StripeService
 {
-    private StripeClient $client;
+    private ?StripeClient $client = null;
 
-    public function __construct()
+    /**
+     * Creato solo quando serve: senza chiave Stripe configurata gli ordini con altri metodi
+     * di pagamento (bonifico, contrassegno…) devono comunque funzionare.
+     */
+    private function client(): StripeClient
     {
-        $this->client = new StripeClient($this->secret());
+        return $this->client ??= new StripeClient($this->secret());
     }
 
     private function secret(): string
@@ -36,7 +40,7 @@ class StripeService
     {
         $spa = rtrim((string) config('portale.spa_url'), '/');
 
-        return $this->client->checkout->sessions->create([
+        return $this->client()->checkout->sessions->create([
             'mode' => 'payment',
             'client_reference_id' => $ordine->id,
             'customer_email' => $ordine->cliente_email,
@@ -56,7 +60,7 @@ class StripeService
 
     public function confirmSession(OrdineB2B $ordine, string $sessionId): bool
     {
-        $session = $this->client->checkout->sessions->retrieve($sessionId);
+        $session = $this->client()->checkout->sessions->retrieve($sessionId);
 
         if ($session->payment_status === 'paid') {
             $ordine->update([

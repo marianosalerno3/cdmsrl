@@ -13,10 +13,10 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        // API SPA agenti — Sanctum risolve il tokenable (App\Models\Agente)
+        // API SPA — Sanctum risolve il tokenable dal token: App\Models\Agente oppure App\Models\Cliente.
+        // Nessun 'provider': con un provider fisso Sanctum scarterebbe i token dei clienti.
         'sanctum' => [
             'driver' => 'sanctum',
-            'provider' => 'agenti',
         ],
     ],
 

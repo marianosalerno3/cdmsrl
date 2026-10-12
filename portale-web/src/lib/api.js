@@ -24,7 +24,10 @@ export function setUnauthorizedHandler(fn) {
 api.interceptors.response.use(
   (r) => r,
   (error) => {
-    if (error.response?.status === 401) {
+    // 401 = token scaduto/revocato; 403 "Account non attivo" = utente disattivato dopo il login
+    const disattivato =
+      error.response?.status === 403 && String(error.response?.data?.message || '').startsWith('Account non attivo')
+    if (error.response?.status === 401 || disattivato) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem('user')
       onUnauthorized()

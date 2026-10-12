@@ -6,7 +6,9 @@ use App\Enums\ClienteTipo;
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
 use App\Filament\Resources\ClienteResource\Pages;
+use App\Mail\ClienteApprovatoMail;
 use App\Models\Cliente;
+use Illuminate\Support\Facades\Mail;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -87,6 +89,8 @@ class ClienteResource extends Resource
                 Tables\Columns\TextColumn::make('partita_iva')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('tipo_listino')->label('Listino')->badge()->toggleable(),
                 Tables\Columns\IconColumn::make('attivo')->boolean(),
+                Tables\Columns\IconColumn::make('accesso')->label('Accesso portale')->boolean()
+                    ->state(fn (Cliente $r) => $r->puoAccedere())->toggleable(),
                 Tables\Columns\IconColumn::make('contrassegno_abilitato')->label('Contrassegno')->boolean()->toggleable(),
                 Tables\Columns\TextColumn::make('sincronizzato_erp_at')->label('Sync ERP')->dateTime('d/m/Y H:i')->toggleable(),
             ])
@@ -107,9 +111,63 @@ class ClienteResource extends Resource
                     ->icon('heroicon-o-check-circle')->color('success')
                     ->visible(fn (Cliente $r) => $r->stato_richiesta === RichiestaStato::InAttesa)
                     ->requiresConfirmation()
+                    ->modalDescription('Il cliente potrà accedere al portale con l\'email e la password scelte in fase di registrazione.')
                     ->action(function (Cliente $r) {
-                        $r->update(['stato_richiesta' => RichiestaStato::Approvato, 'attivo' => true]);
-                        Notification::make()->success()->title('Cliente approvato')->send();
+                        $r->update([
+                            'stato_richiesta' => RichiestaStato::Approvato,
+                            'attivo' => true,
+                            'approvato_at' => now(),
+                        ]);
+
+                        if (! filled($r->password)) {
+                            // registrato dall'agente o importato da ERP: nessuna password scelta dal cliente
+                            Notification::make()->warning()->title('Cliente approvato, ma senza accesso')
+                                ->body('Non ha una password: usa "Imposta accesso" per abilitarlo al portale.')->send();
+
+                            return;
+                        }
+
+                        if (filled($r->email)) {
+                            Mail::to($r->email)->queue(new ClienteApprovatoMail($r));
+                        }
+                        Notification::make()->success()->title('Cliente approvato')
+                            ->body(filled($r->email) ? 'Gli è stata inviata un\'email di conferma.' : null)->send();
+                    }),
+                Tables\Actions\Action::make('rifiuta')
+                    ->icon('heroicon-o-x-circle')->color('danger')
+                    ->visible(fn (Cliente $r) => $r->stato_richiesta === RichiestaStato::InAttesa)
+                    ->requiresConfirmation()
+                    ->action(function (Cliente $r) {
+                        $r->update(['stato_richiesta' => RichiestaStato::Rifiutato, 'attivo' => false]);
+                        $r->tokens()->delete();
+                        Notification::make()->success()->title('Registrazione rifiutata')->send();
+                    }),
+                Tables\Actions\Action::make('imposta_accesso')
+                    ->label('Imposta accesso')
+                    ->icon('heroicon-o-key')->color('gray')
+                    ->modalHeading('Imposta la password di accesso al portale')
+                    ->modalDescription('Per clienti già in anagrafica (ERP) o registrati da un agente. Il cliente verrà approvato e attivato; comunicagli tu email e password.')
+                    ->form([
+                        Forms\Components\TextInput::make('password')->label('Nuova password')
+                            ->password()->revealable()->required()->minLength(8),
+                    ])
+                    ->action(function (Cliente $r, array $data) {
+                        if (! filled($r->email)) {
+                            Notification::make()->danger()->title('Manca l\'email')
+                                ->body('L\'email è il login del cliente: inseriscila nella scheda e riprova.')->send();
+
+                            return;
+                        }
+
+                        $r->update([
+                            'password' => $data['password'],
+                            'stato_richiesta' => RichiestaStato::Approvato,
+                            'attivo' => true,
+                            'approvato_at' => $r->approvato_at ?? now(),
+                        ]);
+                        $r->tokens()->delete(); // chiude le sessioni aperte con la vecchia password
+                        Notification::make()->success()->title('Accesso impostato')
+                            ->body("Login: {$r->email}")->send();
                     }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

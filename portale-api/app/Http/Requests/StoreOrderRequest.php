@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrderRequest extends FormRequest
@@ -14,7 +15,10 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cliente_id' => ['required', 'uuid', 'exists:clienti,id'],
+            // un cliente loggato ordina sempre per sé: cliente_id (se presente) viene ignorato
+            'cliente_id' => $this->user() instanceof Cliente
+                ? ['nullable', 'uuid']
+                : ['required', 'uuid', 'exists:clienti,id'],
             'metodo_pagamento' => ['required', 'in:stripe,bonifico,contrassegno,rimessa'],
             'note_agente' => ['nullable', 'string', 'max:2000'],
             'indirizzo_spedizione' => ['nullable', 'string', 'max:500'],

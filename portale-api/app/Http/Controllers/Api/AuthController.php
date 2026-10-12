@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Enums\RichiestaStato;
 use App\Models\Agente;
+use App\Models\Cliente;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -20,26 +22,50 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Stesso form di accesso per agenti e clienti B2B: prima gli agenti, poi i clienti.
         $agente = Agente::where('email', $data['email'])->first();
 
-        if (! $agente || ! $agente->password || ! Hash::check($data['password'], $agente->password)) {
+        if ($agente && $agente->password && Hash::check($data['password'], $agente->password)) {
+            if (! $agente->attivo) {
+                throw ValidationException::withMessages([
+                    'email' => 'Account agente non attivo.',
+                ]);
+            }
+
+            return $this->issueToken($agente);
+        }
+
+        // Più clienti possono condividere la stessa email (anagrafica ERP): vale quello con la password giusta.
+        $cliente = Cliente::where('email', $data['email'])
+            ->whereNotNull('password')
+            ->get()
+            ->first(fn (Cliente $c) => Hash::check($data['password'], $c->password));
+
+        if (! $cliente) {
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
         }
 
-        if (! $agente->attivo) {
+        if (! $cliente->puoAccedere()) {
             throw ValidationException::withMessages([
-                'email' => 'Account agente non attivo.',
+                'email' => match (true) {
+                    $cliente->stato_richiesta === RichiestaStato::InAttesa => 'La tua registrazione è in attesa di approvazione. Ti contatteremo appena verificata.',
+                    $cliente->stato_richiesta === RichiestaStato::Rifiutato => 'La tua registrazione non è stata approvata. Contatta il backoffice.',
+                    default => 'Account non attivo. Contatta il backoffice.',
+                },
             ]);
         }
 
-        // Un token per dispositivo/login.
-        $token = $agente->createToken('spa-'.Str::random(8))->plainTextToken;
+        return $this->issueToken($cliente);
+    }
 
+    /** Un token per dispositivo/login. */
+    private function issueToken(Agente|Cliente $utente): JsonResponse
+    {
         return response()->json([
-            'token' => $token,
-            'user' => $this->userPayload($agente),
+            'token' => $utente->createToken('spa-'.Str::random(8))->plainTextToken,
+            'user' => $this->userPayload($utente),
         ]);
     }
 
@@ -58,6 +84,14 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate(['email' => ['required', 'email']]);
+
+        // I clienti B2B non hanno il link di reset: la password la reimposta il backoffice dal pannello (Clienti → Imposta accesso).
+        if (! Agente::where('email', $request->input('email'))->exists()
+            && Cliente::where('email', $request->input('email'))->whereNotNull('password')->exists()) {
+            return response()->json([
+                'message' => 'Per reimpostare la password contatta il backoffice: ti riattiveremo l\'accesso.',
+            ]);
+        }
 
         // Broker dedicato agli agenti (vedi config/auth.php -> passwords.agenti).
         $status = Password::broker('agenti')->sendResetLink($request->only('email'));
@@ -88,15 +122,28 @@ class AuthController extends Controller
         ], $status === Password::PASSWORD_RESET ? 200 : 422);
     }
 
-    private function userPayload(Agente $agente): array
+    private function userPayload(Agente|Cliente $utente): array
     {
+        if ($utente instanceof Cliente) {
+            return [
+                'id' => $utente->id,
+                'ruolo' => 'cliente',
+                'nome' => $utente->denominazione,
+                'email' => $utente->email,
+                'codice_agente' => $utente->agente?->codice_agente,
+                'listino_default' => $utente->listinoEffettivo()->value,
+                'commissione_perc' => null,
+            ];
+        }
+
         return [
-            'id' => $agente->id,
-            'nome' => $agente->nome,
-            'email' => $agente->email,
-            'codice_agente' => $agente->codice_agente,
-            'listino_default' => $agente->listino_default->value,
-            'commissione_perc' => (float) $agente->commissione_perc,
+            'id' => $utente->id,
+            'ruolo' => 'agente',
+            'nome' => $utente->nome,
+            'email' => $utente->email,
+            'codice_agente' => $utente->codice_agente,
+            'listino_default' => $utente->listino_default->value,
+            'commissione_perc' => (float) $utente->commissione_perc,
         ];
     }
 }

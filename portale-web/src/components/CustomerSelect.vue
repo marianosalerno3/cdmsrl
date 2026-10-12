@@ -1,12 +1,25 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, watch } from 'vue'
 import { useCustomer } from '@/stores/customer'
+import { useAuth } from '@/stores/auth'
 
 const { state, selected, load, select } = useCustomer()
+const { isCliente } = useAuth()
 
 const options = computed(() => state.list)
 
-onMounted(() => load())
+// Un cliente B2B ordina sempre per sé: /agent/customers restituisce solo lui e lo selezioniamo in automatico.
+function autoSelect() {
+  if (isCliente.value && state.list.length && String(state.list[0].id) !== String(state.selectedId)) {
+    select(state.list[0].id)
+  }
+}
+
+onMounted(async () => {
+  await load()
+  autoSelect()
+})
+watch(() => state.list, autoSelect)
 
 function onChange(e) {
   select(e.target.value || null)
@@ -14,7 +27,7 @@ function onChange(e) {
 </script>
 
 <template>
-  <div>
+  <div v-if="!isCliente">
     <label class="label">Cliente</label>
     <select class="field" :value="selected?.id ?? ''" :disabled="state.loading" @change="onChange">
       <option value="">— Seleziona un cliente —</option>

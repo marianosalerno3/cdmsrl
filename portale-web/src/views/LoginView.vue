@@ -31,8 +31,11 @@ async function submit() {
       }
       router.push(route.query.redirect || { name: 'dashboard' })
     } else {
-      await api.post('/forgot-password', { email: form.value.email })
-      notice.value = 'Se l’indirizzo è registrato, riceverai un’email con le istruzioni.'
+      const { data } = await api.post('/forgot-password', { email: form.value.email })
+      // i clienti B2B non hanno il link via email: l'API indica di contattare il backoffice
+      notice.value = String(data?.message || '').startsWith('Per reimpostare')
+        ? data.message
+        : 'Se l’indirizzo è registrato, riceverai un’email con le istruzioni.'
     }
   } catch (e) {
     error.value = errorMessage(e, 'Credenziali non valide.')
@@ -46,15 +49,15 @@ async function submit() {
   <div class="grid min-h-screen place-items-center p-4">
     <div class="card w-full max-w-md p-8">
       <p class="text-center text-3xl font-extrabold uppercase tracking-tight">{{ COMPANY_NAME }}</p>
-      <h1 class="mt-1 text-center text-sm font-medium uppercase tracking-widest text-zinc-500">Portale Agenti B2B</h1>
+      <h1 class="mt-1 text-center text-sm font-medium uppercase tracking-widest text-zinc-500">Portale B2B</h1>
       <p class="mt-1 text-center text-sm text-zinc-500">
-        {{ mode === 'login' ? 'Accedi al tuo account' : 'Recupero password' }}
+        {{ mode === 'login' ? 'Accedi come agente o come cliente B2B' : 'Recupero password' }}
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="submit">
         <div>
           <label class="label">Email</label>
-          <input v-model="form.email" type="email" required class="field" placeholder="nome@agenzia.com" />
+          <input v-model="form.email" type="email" required class="field" placeholder="nome@azienda.com" />
         </div>
 
         <div v-if="mode === 'login'">
@@ -78,7 +81,7 @@ async function submit() {
           {{ mode === 'login' ? 'Password dimenticata?' : 'Torna al login' }}
         </button>
         <RouterLink to="/register-b2b" class="text-sm font-semibold text-zinc-500 hover:text-ink">
-          Nuovo cliente? Registrati come B2B
+          Nuovo cliente? Registrati come B2B (l'accesso viene attivato dopo l'approvazione)
         </RouterLink>
       </div>
     </div>

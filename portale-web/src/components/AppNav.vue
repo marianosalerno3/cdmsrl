@@ -7,19 +7,24 @@ import { useCustomer } from '@/stores/customer'
 import { COMPANY_NAME } from '@/lib/brand'
 
 const router = useRouter()
-const { state: auth, logout } = useAuth()
+const { state: auth, isCliente, logout } = useAuth()
 const { count } = useCart()
 const { selected } = useCustomer()
 const open = ref(false)
 
-const links = [
+// il cliente B2B ordina da solo: niente sostituzioni né gestione clienti (funzioni dell'agente)
+const links = computed(() => [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/catalog', label: 'Catalogo' },
-  { to: '/sostituzioni', label: 'Sostituzioni' },
-  { to: '/agent/new-client', label: 'Nuovo Cliente' },
-]
+  ...(isCliente.value
+    ? []
+    : [
+        { to: '/sostituzioni', label: 'Sostituzioni' },
+        { to: '/agent/new-client', label: 'Nuovo Cliente' },
+      ]),
+])
 
-const agentName = computed(() => auth.user?.nome || auth.user?.email || 'Agente')
+const agentName = computed(() => auth.user?.nome || auth.user?.email || (isCliente.value ? 'Cliente' : 'Agente'))
 
 async function onLogout() {
   await logout()
@@ -32,7 +37,9 @@ async function onLogout() {
     <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
       <RouterLink to="/dashboard" class="flex flex-col leading-tight">
         <span class="text-lg font-bold uppercase tracking-tight">{{ COMPANY_NAME }}</span>
-        <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-500">Portale Agenti</span>
+        <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-500">
+          {{ isCliente ? 'Area Clienti B2B' : 'Portale Agenti' }}
+        </span>
       </RouterLink>
 
       <nav class="ml-4 hidden items-center gap-1 md:flex">
@@ -48,7 +55,7 @@ async function onLogout() {
       </nav>
 
       <div class="ml-auto flex items-center gap-2">
-        <span v-if="selected" class="hidden text-xs text-zinc-500 sm:inline">
+        <span v-if="selected && !isCliente" class="hidden text-xs text-zinc-500 sm:inline">
           Cliente: <span class="font-semibold text-ink">{{ selected.denominazione }}</span>
         </span>
 

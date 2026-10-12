@@ -8,7 +8,7 @@ import { money, date } from '@/lib/format'
 import Spinner from '@/components/Spinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
-const { state: auth } = useAuth()
+const { state: auth, isCliente } = useAuth()
 const { config } = useConfig()
 const { state: customerState, load: loadCustomers } = useCustomer()
 
@@ -74,8 +74,9 @@ onMounted(async () => {
       </video>
       <div class="relative p-6 sm:p-8">
         <p class="text-sm text-white/70">Benvenuto</p>
-        <h1 class="text-2xl font-bold tracking-tight">{{ auth.user?.nome || 'Agente' }}</h1>
-        <p class="mt-1 text-sm text-white/70">Codice agente {{ auth.user?.codice_agente }}</p>
+        <h1 class="text-2xl font-bold tracking-tight">{{ auth.user?.nome || (isCliente ? 'Cliente' : 'Agente') }}</h1>
+        <p v-if="!isCliente" class="mt-1 text-sm text-white/70">Codice agente {{ auth.user?.codice_agente }}</p>
+        <p v-else class="mt-1 text-sm text-white/70">Area riservata ai clienti B2B</p>
       </div>
     </div>
 
@@ -85,10 +86,15 @@ onMounted(async () => {
         <p class="mt-1 text-3xl font-bold">{{ monthlyOrders }}</p>
         <p class="text-xs text-zinc-400">mese corrente</p>
       </div>
-      <div class="card p-5">
+      <div v-if="!isCliente" class="card p-5">
         <p class="text-sm text-zinc-500">Clienti portafoglio</p>
         <p class="mt-1 text-3xl font-bold">{{ customerState.list.length }}</p>
         <RouterLink to="/agent/new-client" class="btn-link">+ Nuovo cliente</RouterLink>
+      </div>
+      <div v-else class="card p-5">
+        <p class="text-sm text-zinc-500">Il tuo listino</p>
+        <p class="mt-1 text-3xl font-bold capitalize">{{ auth.user?.listino_default || 'standard' }}</p>
+        <RouterLink to="/catalog" class="btn-link">Vai al catalogo</RouterLink>
       </div>
       <div class="card p-5">
         <p class="text-xs uppercase tracking-wide text-zinc-400">Importo minimo nuovo ordine</p>

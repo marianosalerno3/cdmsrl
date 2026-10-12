@@ -1,11 +1,16 @@
 @component('mail::message')
 # Nuovo ordine dal portale — {{ $ordine->numero }}
 
+@if ($ordine->da_cliente)
+Il cliente ha inserito da solo un nuovo ordine dal portale. Prendilo in carico e caricalo su WinMino.
+@else
 Un agente ha inviato un nuovo ordine. Prendilo in carico e caricalo su WinMino.
+@endif
 
 @component('mail::table')
 | | |
 |---|---|
+| Inserito da | {{ $ordine->da_cliente ? 'Cliente (accesso diretto al portale)' : 'Agente' }} |
 | Cliente | {{ $ordine->cliente_nome }} |
 | Agente | {{ $ordine->agente?->nome ?? '—' }} |
 | Data | {{ $ordine->data_ordine?->format('d/m/Y') }} |

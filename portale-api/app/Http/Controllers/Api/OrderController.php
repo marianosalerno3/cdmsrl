@@ -27,13 +27,27 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request): JsonResponse
     {
-        $agente = $request->user();
-        $cliente = Cliente::findOrFail($request->validated('cliente_id'));
-        abort_unless($cliente->agente_id === $agente->id, 403, 'Cliente non nel portafoglio agente.');
+        $utente = $request->user();
+        $daCliente = $utente instanceof Cliente;
+
+        if ($daCliente) {
+            // il cliente ordina per sé, con il proprio listino; l'ordine è attribuito al suo agente (se ne ha uno)
+            $cliente = $utente;
+            $agente = $cliente->agente;
+            abort_if(
+                $request->validated('metodo_pagamento') === PaymentMethod::Contrassegno->value && ! $cliente->contrassegno_abilitato,
+                422,
+                'Il pagamento in contrassegno non è abilitato per il tuo account.',
+            );
+        } else {
+            $agente = $utente;
+            $cliente = Cliente::findOrFail($request->validated('cliente_id'));
+            abort_unless($cliente->agente_id === $agente->id, 403, 'Cliente non nel portafoglio agente.');
+        }
 
         $listino = $cliente->listinoEffettivo();
 
-        $ordine = DB::transaction(function () use ($request, $agente, $cliente, $listino) {
+        $ordine = DB::transaction(function () use ($request, $agente, $cliente, $listino, $daCliente) {
             $righeInput = collect($request->validated('righe'));
             $varianti = VarianteProdotto::with('prodotto.stagione')
                 ->whereIn('id', $righeInput->pluck('variante_id'))
@@ -67,8 +81,9 @@ class OrderController extends Controller
             $totali = $this->prices->totals($righe, $spedizione);
 
             $ordine = OrdineB2B::create([
-                'agente_id' => $agente->id,
+                'agente_id' => $agente?->id,
                 'cliente_id' => $cliente->id,
+                'da_cliente' => $daCliente,
                 'cliente_nome' => $cliente->denominazione,
                 'cliente_email' => $cliente->email,
                 'cliente_telefono' => $cliente->telefono,
@@ -185,7 +200,14 @@ class OrderController extends Controller
 
     private function authorizeOrder(Request $request, OrdineB2B $ordine): void
     {
-        abort_unless($ordine->agente_id === $request->user()->id, 403);
+        $user = $request->user();
+
+        // il cliente vede/gestisce solo i propri ordini; l'agente quelli che gli sono attribuiti
+        $ok = $user instanceof Cliente
+            ? $ordine->cliente_id === $user->id
+            : $ordine->agente_id === $user->id;
+
+        abort_unless($ok, 403);
     }
 
     private function serialize(OrdineB2B $ordine): array

@@ -55,15 +55,23 @@ class ProductController extends Controller
 
     private function listino(Request $request): ListinoTipo
     {
+        $user = $request->user();
+
+        // Un cliente loggato vede sempre e solo il proprio listino (customer_id ignorato).
+        if ($user instanceof Cliente) {
+            return $user->listinoEffettivo();
+        }
+
         $customerId = $request->string('customer_id')->toString();
 
         if ($customerId) {
-            $cliente = Cliente::find($customerId);
+            // L'agente può simulare solo i propri clienti.
+            $cliente = Cliente::where('agente_id', $user?->id)->find($customerId);
             if ($cliente) {
                 return $cliente->listinoEffettivo();
             }
         }
 
-        return $request->user()?->listino_default ?? ListinoTipo::Standard;
+        return $user?->listino_default ?? ListinoTipo::Standard;
     }
 }

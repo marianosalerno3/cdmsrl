@@ -18,8 +18,14 @@ const routes = [
     path: '/agent/new-client',
     name: 'agent-new-client',
     component: () => import('@/views/AgentNewClientView.vue'),
+    meta: { agentOnly: true },
   },
-  { path: '/sostituzioni', name: 'sostituzioni', component: () => import('@/views/SostituzioniView.vue') },
+  {
+    path: '/sostituzioni',
+    name: 'sostituzioni',
+    component: () => import('@/views/SostituzioniView.vue'),
+    meta: { agentOnly: true },
+  },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
@@ -30,7 +36,9 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isCliente } = useAuth()
+  // sostituzioni e nuovo cliente sono funzioni degli agenti: il cliente B2B torna alla dashboard
+  if (to.meta.agentOnly && isCliente.value) return { name: 'dashboard' }
   if (!to.meta.public && !isAuthenticated.value) {
     return { name: 'login', query: to.fullPath !== '/dashboard' ? { redirect: to.fullPath } : {} }
   }

@@ -16,29 +16,27 @@ use Illuminate\Support\Facades\Route;
 */
 
 // -------- Pubbliche --------
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-Route::post('/register-b2b', [RegisterB2BController::class, 'store']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
+Route::post('/register-b2b', [RegisterB2BController::class, 'store'])->middleware('throttle:6,1');
 Route::get('/filters', [FilterController::class, 'index']);
 
-// -------- Protette (agente autenticato) --------
-Route::middleware(['auth:sanctum', 'agente.attivo'])->group(function () {
+// -------- Protette: agente attivo oppure cliente B2B approvato --------
+Route::middleware(['auth:sanctum', 'utente.attivo'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::get('/app-config', [AppConfigController::class, 'show']);
 
-    // Catalogo
+    // Catalogo (il listino è quello del cliente: per il cliente loggato è il suo, per l'agente quello del cliente scelto)
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{prodotto}', [ProductController::class, 'show']);
 
-    // Dati dell'agente
+    // Clienti/ordini/stagioni dell'utente loggato (per un cliente: se stesso e i propri ordini)
     Route::get('/agent/customers', [AgentController::class, 'customers']);
     Route::get('/agent/orders', [AgentController::class, 'orders']);
     Route::get('/agent/seasons', [AgentController::class, 'seasons']);
-    Route::get('/agent/returns', [AgentController::class, 'returns']);
-    Route::post('/clients', [AgentController::class, 'storeClientRequest']);
 
     // Ordini
     Route::post('/orders', [OrderController::class, 'store']);
@@ -48,6 +46,12 @@ Route::middleware(['auth:sanctum', 'agente.attivo'])->group(function () {
     Route::get('/orders/{ordine}/pdf/v2', [OrderController::class, 'pdf']);
     Route::post('/orders/{ordine}/checkout-session', [OrderController::class, 'checkoutSession']);
     Route::post('/orders/{ordine}/verify-stripe-payment', [OrderController::class, 'verifyStripePayment']);
+});
+
+// -------- Solo agenti --------
+Route::middleware(['auth:sanctum', 'agente.attivo'])->group(function () {
+    Route::get('/agent/returns', [AgentController::class, 'returns']);
+    Route::post('/clients', [AgentController::class, 'storeClientRequest']);
 
     // Sostituzioni / resi
     Route::post('/returns', [ReturnController::class, 'store']);

@@ -37,6 +37,14 @@ export function useCustomer() {
   return { state, selected, load, select }
 }
 
+/** Da chiamare al logout: un altro utente (agente o cliente) non deve ereditare lista e selezione. */
+export function resetCustomers() {
+  state.list = []
+  state.selectedId = null
+  loadedOnce = false
+  localStorage.removeItem('selectedCustomerId')
+}
+
 // mantiene coerente lo storage se qualcuno modifica selectedId altrove
 watch(
   () => state.selectedId,

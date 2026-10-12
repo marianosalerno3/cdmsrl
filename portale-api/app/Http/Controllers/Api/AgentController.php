@@ -12,30 +12,35 @@ use Illuminate\Http\Request;
 
 class AgentController extends Controller
 {
-    /** GET /api/agent/customers — portafoglio clienti dell'agente autenticato. */
+    /**
+     * GET /api/agent/customers — portafoglio clienti dell'agente autenticato.
+     * Per un cliente loggato l'elenco contiene soltanto lui stesso (così la SPA lo seleziona in automatico).
+     */
     public function customers(Request $request): JsonResponse
     {
-        $clienti = $request->user()->clienti()
+        $user = $request->user();
+
+        if ($user instanceof Cliente) {
+            return response()->json(['data' => [$this->customerRow($user)]]);
+        }
+
+        $clienti = $user->clienti()
             ->where('attivo', true)
             ->where('stato_richiesta', RichiestaStato::Approvato)
             ->orderBy('ragione_sociale')
             ->get()
-            ->map(fn (Cliente $c) => [
-                'id' => $c->id,
-                'denominazione' => $c->denominazione,
-                'partita_iva' => $c->partita_iva,
-                'listino' => $c->listinoEffettivo()->value,
-                'contrassegno_abilitato' => $c->contrassegno_abilitato,
-                'indirizzo' => trim("{$c->indirizzo}, {$c->cap} {$c->citta} ({$c->provincia})", ', '),
-            ]);
+            ->map(fn (Cliente $c) => $this->customerRow($c));
 
         return response()->json(['data' => $clienti]);
     }
 
-    /** GET /api/agent/orders */
+    /** GET /api/agent/orders — ordini dell'agente, oppure i propri ordini se l'utente è un cliente. */
     public function orders(Request $request): JsonResponse
     {
-        $ordini = $request->user()->ordini()
+        $user = $request->user();
+
+        // Agente::ordini() e Cliente::ordini() hanno la stessa forma: l'utente vede solo i propri ordini.
+        $ordini = $user->ordini()
             ->with('cliente')
             ->when($request->string('season')->toString(), fn ($q, $s) => $q
                 ->whereHas('righe.variante.prodotto.stagione', fn ($q) => $q->where('codice', $s)))
@@ -44,6 +49,18 @@ class AgentController extends Controller
             ->withQueryString();
 
         return response()->json($ordini);
+    }
+
+    private function customerRow(Cliente $c): array
+    {
+        return [
+            'id' => $c->id,
+            'denominazione' => $c->denominazione,
+            'partita_iva' => $c->partita_iva,
+            'listino' => $c->listinoEffettivo()->value,
+            'contrassegno_abilitato' => $c->contrassegno_abilitato,
+            'indirizzo' => trim("{$c->indirizzo}, {$c->cap} {$c->citta} ({$c->provincia})", ', '),
+        ];
     }
 
     /** GET /api/agent/seasons */

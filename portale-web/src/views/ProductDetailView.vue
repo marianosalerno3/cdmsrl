@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, errorMessage } from '@/lib/api'
 import { useCustomer } from '@/stores/customer'
+import { useAuth } from '@/stores/auth'
 import { useCart } from '@/stores/cart'
 import Spinner from '@/components/Spinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -10,7 +11,8 @@ import SizeColorMatrix from '@/components/SizeColorMatrix.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { selected } = useCustomer()
+const { state: customers, selected, load: loadCustomers, select } = useCustomer()
+const { isCliente } = useAuth()
 const cart = useCart()
 
 const product = ref(null)
@@ -40,7 +42,14 @@ function onAdd(lines) {
   router.push({ name: 'cart' })
 }
 
-onMounted(fetch)
+onMounted(async () => {
+  // apertura diretta/ricarica della scheda: il cliente B2B va selezionato prima di caricare i prezzi
+  if (isCliente.value) {
+    await loadCustomers()
+    if (customers.list[0]) select(customers.list[0].id)
+  }
+  fetch()
+})
 </script>
 
 <template>

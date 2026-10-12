@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, errorMessage } from '@/lib/api'
 import { useCart } from '@/stores/cart'
 import { useCustomer } from '@/stores/customer'
+import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { money } from '@/lib/format'
 import CustomerSelect from '@/components/CustomerSelect.vue'
@@ -13,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const cart = useCart()
 const { selected } = useCustomer()
+const { isCliente } = useAuth()
 const { config, paymentLabel } = useConfig()
 
 const metodo = ref('')
@@ -22,7 +24,12 @@ const submitting = ref(false)
 const error = ref('')
 const success = ref(null)
 
-const metodi = computed(() => config.metodi_pagamento ?? ['bonifico', 'contrassegno', 'stripe'])
+// il contrassegno si offre al cliente solo se il backoffice glielo ha abilitato (l'API lo verifica comunque)
+const metodi = computed(() =>
+  (config.metodi_pagamento ?? ['bonifico', 'contrassegno', 'stripe']).filter(
+    (m) => m !== 'contrassegno' || !isCliente.value || selected.value?.contrassegno_abilitato,
+  ),
+)
 
 const canSubmit = computed(
   () => selected.value && cart.state.items.length && metodo.value && !cart.belowMinimum.value,
