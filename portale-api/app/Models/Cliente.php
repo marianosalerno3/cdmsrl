@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\ClienteTipo;
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
+use App\Mail\ClienteApprovatoMail;
 use Illuminate\Database\Eloquent\Concerns\HasVersion7Uuids;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -49,6 +51,21 @@ class Cliente extends Authenticatable
             'documenti' => 'array',
             'sincronizzato_erp_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // La prima volta che un cliente può accedere (password + approvato + attivo), da qualunque punto del pannello
+        // (pulsante Approva, scheda di modifica, Imposta accesso), registriamo la data e gli mandiamo l'email di conferma.
+        static::saved(function (self $cliente) {
+            if ($cliente->approvato_at === null && $cliente->puoAccedere()) {
+                $cliente->forceFill(['approvato_at' => now()])->saveQuietly();
+
+                if (filled($cliente->email)) {
+                    Mail::to($cliente->email)->queue(new ClienteApprovatoMail($cliente));
+                }
+            }
+        });
     }
 
     /** Può accedere al portale: ha una password, è approvato e attivo. */

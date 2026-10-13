@@ -6,9 +6,7 @@ use App\Enums\ClienteTipo;
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
 use App\Filament\Resources\ClienteResource\Pages;
-use App\Mail\ClienteApprovatoMail;
 use App\Models\Cliente;
-use Illuminate\Support\Facades\Mail;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -113,11 +111,8 @@ class ClienteResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('Il cliente potrà accedere al portale con l\'email e la password scelte in fase di registrazione.')
                     ->action(function (Cliente $r) {
-                        $r->update([
-                            'stato_richiesta' => RichiestaStato::Approvato,
-                            'attivo' => true,
-                            'approvato_at' => now(),
-                        ]);
+                        // l'email di conferma parte da sola (vedi Cliente::booted) quando il cliente può accedere
+                        $r->update(['stato_richiesta' => RichiestaStato::Approvato, 'attivo' => true]);
 
                         if (! filled($r->password)) {
                             // registrato dall'agente o importato da ERP: nessuna password scelta dal cliente
@@ -127,9 +122,6 @@ class ClienteResource extends Resource
                             return;
                         }
 
-                        if (filled($r->email)) {
-                            Mail::to($r->email)->queue(new ClienteApprovatoMail($r));
-                        }
                         Notification::make()->success()->title('Cliente approvato')
                             ->body(filled($r->email) ? 'Gli è stata inviata un\'email di conferma.' : null)->send();
                     }),
@@ -163,7 +155,6 @@ class ClienteResource extends Resource
                             'password' => $data['password'],
                             'stato_richiesta' => RichiestaStato::Approvato,
                             'attivo' => true,
-                            'approvato_at' => $r->approvato_at ?? now(),
                         ]);
                         $r->tokens()->delete(); // chiude le sessioni aperte con la vecchia password
                         Notification::make()->success()->title('Accesso impostato')

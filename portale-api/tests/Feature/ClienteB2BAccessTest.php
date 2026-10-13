@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
+use App\Mail\ClienteApprovatoMail;
 use App\Mail\NuovaRegistrazioneB2BMail;
 use App\Models\Agente;
 use App\Models\Cliente;
@@ -80,6 +81,35 @@ class ClienteB2BAccessTest extends TestCase
         $this->assertFalse($c->attivo);
         $this->assertNotSame('una-password-lunga', $c->password); // salvata hashata
         Mail::assertQueued(NuovaRegistrazioneB2BMail::class);
+    }
+
+    public function test_approvazione_da_qualunque_punto_invia_una_sola_email_al_cliente(): void
+    {
+        Mail::fake();
+
+        $this->postJson('/api/register-b2b', $this->registrazione())->assertCreated();
+        $cliente = Cliente::where('email', 'nuova@example.test')->firstOrFail();
+        Mail::assertNotQueued(ClienteApprovatoMail::class); // ancora in attesa
+
+        // approvazione dalla scheda di modifica (non dal pulsante Approva)
+        $cliente->update(['stato_richiesta' => RichiestaStato::Approvato, 'attivo' => true]);
+
+        Mail::assertQueued(ClienteApprovatoMail::class, 1);
+        $this->assertNotNull($cliente->fresh()->approvato_at);
+
+        // ulteriori modifiche non rimandano l'email
+        $cliente->fresh()->update(['telefono' => '0811234567']);
+        Mail::assertQueued(ClienteApprovatoMail::class, 1);
+    }
+
+    public function test_cliente_approvato_senza_password_non_riceve_email_finche_non_ha_accesso(): void
+    {
+        Mail::fake();
+        $cliente = $this->cliente(['password' => null, 'email' => 'erp@example.test']);
+        Mail::assertNotQueued(ClienteApprovatoMail::class);
+
+        $cliente->update(['password' => 'nuova-password-1']);
+        Mail::assertQueued(ClienteApprovatoMail::class, 1);
     }
 
     public function test_registrazione_richiede_pec_o_codice_sdi(): void
