@@ -8,6 +8,8 @@ Un nuovo cliente si è registrato dal portale e non può accedere finché non vi
 |---|---|
 | Ragione sociale | {{ $cliente->ragione_sociale }} |
 | Partita IVA | {{ $cliente->partita_iva }} |
+| PEC | {{ $cliente->pec ?? '—' }} |
+| Codice SDI | {{ $cliente->codice_sdi ?? '—' }} |
 | Email | {{ $cliente->email }} |
 | Telefono | {{ $cliente->telefono ?? '—' }} |
 | Sede | {{ $cliente->indirizzo }}, {{ $cliente->cap }} {{ $cliente->citta }} ({{ $cliente->provincia }}) |

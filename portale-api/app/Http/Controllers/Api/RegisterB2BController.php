@@ -26,8 +26,9 @@ class RegisterB2BController extends Controller
             'ragione_sociale' => ['required', 'string', 'max:255'],
             'partita_iva' => ['required', 'string', 'max:20'],
             'codice_fiscale' => ['nullable', 'string', 'max:20'],
-            'codice_sdi' => ['nullable', 'string', 'max:12'],
-            'pec' => ['nullable', 'email'],
+            // per la fatturazione elettronica serve almeno uno tra PEC e codice destinatario SDI
+            'codice_sdi' => ['required_without:pec', 'nullable', 'string', 'regex:/^[A-Za-z0-9]{6,7}$/'],
+            'pec' => ['required_without:codice_sdi', 'nullable', 'email'],
             'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'telefono' => ['nullable', 'string', 'max:40'],
@@ -38,6 +39,11 @@ class RegisterB2BController extends Controller
             'agente_codice' => ['nullable', 'string'],
             'documenti' => ['nullable', 'array', 'max:6'],
             'documenti.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:8192'],
+        ], [
+            'pec.required_without' => 'Inserisci la PEC oppure il Codice SDI (almeno uno dei due).',
+            'codice_sdi.required_without' => 'Inserisci il Codice SDI oppure la PEC (almeno uno dei due).',
+            'codice_sdi.regex' => 'Il Codice SDI deve essere di 6 o 7 caratteri (lettere e numeri).',
+            'pec.email' => 'La PEC non è un indirizzo email valido.',
         ]);
 
         $email = mb_strtolower(trim($data['email']));
@@ -72,7 +78,7 @@ class RegisterB2BController extends Controller
             'ragione_sociale' => $data['ragione_sociale'],
             'partita_iva' => $piva,
             'codice_fiscale' => $data['codice_fiscale'] ?? null,
-            'codice_sdi' => $data['codice_sdi'] ?? null,
+            'codice_sdi' => isset($data['codice_sdi']) ? strtoupper($data['codice_sdi']) : null,
             'pec' => $data['pec'] ?? null,
             'email' => $email,
             'password' => $data['password'],

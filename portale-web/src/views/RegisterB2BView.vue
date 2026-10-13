@@ -107,13 +107,23 @@ async function submit() {
           />
         </div>
         <div>
-          <label class="label">PEC</label>
-          <input v-model="form.pec" type="email" class="field" />
+          <label class="label">PEC {{ form.codice_sdi ? '' : '*' }}</label>
+          <input v-model="form.pec" type="email" :required="!form.codice_sdi" class="field" />
         </div>
         <div>
-          <label class="label">Codice SDI</label>
-          <input v-model="form.codice_sdi" class="field" />
+          <label class="label">Codice SDI {{ form.pec ? '' : '*' }}</label>
+          <input
+            v-model="form.codice_sdi"
+            :required="!form.pec"
+            maxlength="7"
+            pattern="[A-Za-z0-9]{6,7}"
+            title="6 o 7 caratteri (lettere e numeri)"
+            class="field uppercase"
+          />
         </div>
+        <p class="-mt-2 text-xs text-zinc-500 sm:col-span-2">
+          Per la fatturazione elettronica inserisci almeno uno tra PEC e Codice SDI.
+        </p>
         <div class="sm:col-span-2">
           <label class="label">Indirizzo sede *</label>
           <input v-model="form.indirizzo" required class="field" />

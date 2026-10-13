@@ -63,6 +63,7 @@ class ClienteB2BAccessTest extends TestCase
             'email' => 'nuova@example.test',
             'password' => 'una-password-lunga',
             'password_confirmation' => 'una-password-lunga',
+            'pec' => 'nuova@pec.example.test',
             'indirizzo' => 'Via Milano 5', 'cap' => '20100', 'citta' => 'Milano', 'provincia' => 'MI',
         ];
     }
@@ -79,6 +80,24 @@ class ClienteB2BAccessTest extends TestCase
         $this->assertFalse($c->attivo);
         $this->assertNotSame('una-password-lunga', $c->password); // salvata hashata
         Mail::assertQueued(NuovaRegistrazioneB2BMail::class);
+    }
+
+    public function test_registrazione_richiede_pec_o_codice_sdi(): void
+    {
+        Mail::fake();
+        $senza = $this->registrazione();
+        unset($senza['pec']);
+
+        $this->postJson('/api/register-b2b', $senza)
+            ->assertStatus(422)->assertJsonValidationErrors(['pec', 'codice_sdi']);
+
+        // solo il codice SDI basta (e viene salvato maiuscolo)
+        $this->postJson('/api/register-b2b', $senza + ['codice_sdi' => 'abc1234'])->assertCreated();
+        $this->assertSame('ABC1234', Cliente::where('email', 'nuova@example.test')->value('codice_sdi'));
+
+        // un codice SDI malformato è rifiutato
+        $this->postJson('/api/register-b2b', $this->registrazione(['pec' => null, 'codice_sdi' => 'XY', 'email' => 'x@example.test', 'partita_iva' => '99988877766']))
+            ->assertStatus(422)->assertJsonValidationErrors('codice_sdi');
     }
 
     public function test_registrazione_rifiuta_partita_iva_gia_presente_ed_email_gia_usata(): void
