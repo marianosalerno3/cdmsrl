@@ -10,6 +10,12 @@ const routes = [
     component: () => import('@/views/RegisterB2BView.vue'),
     meta: { public: true },
   },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/ResetPasswordView.vue'),
+    meta: { public: true },
+  },
   { path: '/dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
   { path: '/catalog', name: 'catalog', component: () => import('@/views/CatalogView.vue') },
   { path: '/product/:id', name: 'product', component: () => import('@/views/ProductDetailView.vue') },

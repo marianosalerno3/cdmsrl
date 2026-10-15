@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -22,6 +23,7 @@ class Cliente extends Authenticatable
 {
     use HasApiTokens;
     use HasVersion7Uuids;
+    use Notifiable; // serve per inviare l'email di reset password
     use SoftDeletes;
 
     protected $table = 'clienti';

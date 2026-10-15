@@ -29,6 +29,11 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\Agente::class,
         ],
+        // clienti B2B con accesso (solo per il reset password, vedi App\Auth\ClientiUserProvider)
+        'clienti' => [
+            'driver' => 'clienti-con-accesso',
+            'model' => App\Models\Cliente::class,
+        ],
     ],
 
     'passwords' => [
@@ -41,6 +46,12 @@ return [
         'agenti' => [
             'provider' => 'agenti',
             'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'clienti' => [
+            'provider' => 'clienti',
+            'table' => 'cliente_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

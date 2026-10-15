@@ -84,21 +84,17 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate(['email' => ['required', 'email']]);
+        $credentials = ['email' => mb_strtolower(trim($request->input('email')))];
 
-        // I clienti B2B non hanno il link di reset: la password la reimposta il backoffice dal pannello (Clienti → Imposta accesso).
-        if (! Agente::where('email', $request->input('email'))->exists()
-            && Cliente::where('email', $request->input('email'))->whereNotNull('password')->exists()) {
-            return response()->json([
-                'message' => 'Per reimpostare la password contatta il backoffice: ti riattiveremo l\'accesso.',
-            ]);
-        }
-
-        // Broker dedicato agli agenti (vedi config/auth.php -> passwords.agenti).
-        $status = Password::broker('agenti')->sendResetLink($request->only('email'));
+        // Link di reset per agenti (broker "agenti") e per clienti B2B con accesso (broker "clienti").
+        // Un cliente senza password (anagrafica ERP non ancora abilitata) non può usare questa via per attivarsi:
+        // l'accesso lo abilita il backoffice. Risposta sempre uguale: non riveliamo se l'email esiste.
+        Password::broker('agenti')->sendResetLink($credentials);
+        Password::broker('clienti')->sendResetLink($credentials);
 
         return response()->json([
-            'message' => __($status),
-        ], $status === Password::RESET_LINK_SENT ? 200 : 422);
+            'message' => 'Se l\'indirizzo è registrato, riceverai un\'email con il link per reimpostare la password.',
+        ]);
     }
 
     public function resetPassword(Request $request): JsonResponse
@@ -106,19 +102,27 @@ class AuthController extends Controller
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', 'min:6'],
+            'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
-        $status = Password::broker('agenti')->reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (Agente $agente, string $password) {
-                $agente->forceFill(['password' => Hash::make($password)])->save();
-                $agente->tokens()->delete();
-            }
-        );
+        $credentials = $request->only('email', 'password', 'password_confirmation', 'token');
+        $credentials['email'] = mb_strtolower(trim($credentials['email']));
+
+        $imposta = function (Agente|Cliente $utente, string $password) {
+            $utente->forceFill(['password' => Hash::make($password)])->save();
+            $utente->tokens()->delete(); // chiude le sessioni aperte con la vecchia password
+        };
+
+        // il token appartiene a uno solo dei due broker: se l'email non è di un agente proviamo con i clienti
+        $status = Password::broker('agenti')->reset($credentials, $imposta);
+        if ($status === Password::INVALID_USER) {
+            $status = Password::broker('clienti')->reset($credentials, $imposta);
+        }
 
         return response()->json([
-            'message' => __($status),
+            'message' => $status === Password::PASSWORD_RESET
+                ? 'Password aggiornata: ora puoi accedere.'
+                : 'Il link non è valido o è scaduto. Richiedine uno nuovo dalla pagina di accesso.',
         ], $status === Password::PASSWORD_RESET ? 200 : 422);
     }
 

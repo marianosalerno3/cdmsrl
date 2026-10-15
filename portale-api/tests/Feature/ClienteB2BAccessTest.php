@@ -9,6 +9,8 @@ use App\Mail\ClienteApprovatoMail;
 use App\Models\AppConfig;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use App\Mail\NuovaRegistrazioneB2BMail;
 use App\Models\Agente;
@@ -322,12 +324,81 @@ class ClienteB2BAccessTest extends TestCase
             ->assertJsonPath('metodi_pagamento', ['bonifico', 'stripe']);
     }
 
-    public function test_recupero_password_del_cliente_rimanda_al_backoffice(): void
+    public function test_il_cliente_reimposta_la_password_con_il_link_ricevuto_via_email(): void
     {
-        $this->cliente(['email' => 'rossi@example.test']);
+        Notification::fake();
+        $cliente = $this->cliente(['email' => 'rossi@example.test']);
+        $vecchioToken = $cliente->createToken('vecchia-sessione')->plainTextToken;
 
-        $res = $this->postJson('/api/forgot-password', ['email' => 'rossi@example.test'])->assertOk();
-        $this->assertStringContainsString('backoffice', $res->json('message'));
+        $this->postJson('/api/forgot-password', ['email' => 'rossi@example.test'])->assertOk();
+
+        $token = null;
+        Notification::assertSentTo($cliente, ResetPassword::class, function ($n) use (&$token, $cliente) {
+            $token = $n->token;
+            $mail = $n->toMail($cliente);
+
+            // il link porta alla pagina della SPA, con token ed email
+            return str_contains($mail->actionUrl, '/reset-password?token='.$n->token.'&email=rossi%40example.test');
+        });
+
+        $this->postJson('/api/reset-password', [
+            'email' => 'rossi@example.test', 'token' => $token,
+            'password' => 'nuova-password-9', 'password_confirmation' => 'nuova-password-9',
+        ])->assertOk();
+
+        // la vecchia sessione è chiusa, la vecchia password non vale, la nuova sì
+        $this->app['auth']->forgetGuards();
+        $this->withToken($vecchioToken)->getJson('/api/me')->assertUnauthorized();
+        $this->postJson('/api/login', ['email' => 'rossi@example.test', 'password' => 'password-cliente'])->assertStatus(422);
+        $this->postJson('/api/login', ['email' => 'rossi@example.test', 'password' => 'nuova-password-9'])->assertOk();
+
+        // il link è monouso
+        $this->postJson('/api/reset-password', [
+            'email' => 'rossi@example.test', 'token' => $token,
+            'password' => 'altra-password-9', 'password_confirmation' => 'altra-password-9',
+        ])->assertStatus(422);
+    }
+
+    public function test_recupero_password_non_rivela_se_l_email_esiste_e_non_attiva_clienti_senza_accesso(): void
+    {
+        Notification::fake();
+        $senzaAccesso = $this->cliente(['password' => null, 'email' => 'erp@example.test']);
+
+        $sconosciuta = $this->postJson('/api/forgot-password', ['email' => 'nessuno@example.test'])->assertOk();
+        $erp = $this->postJson('/api/forgot-password', ['email' => 'erp@example.test'])->assertOk();
+
+        // stessa risposta in ogni caso e nessuna email a chi non ha ancora un accesso
+        $this->assertSame($sconosciuta->json('message'), $erp->json('message'));
+        Notification::assertNothingSent();
+
+        // nemmeno con un token costruito a mano il cliente senza password può attivarsi
+        $this->postJson('/api/reset-password', [
+            'email' => 'erp@example.test', 'token' => 'token-inventato',
+            'password' => 'nuova-password-9', 'password_confirmation' => 'nuova-password-9',
+        ])->assertStatus(422);
+        $this->assertNull($senzaAccesso->fresh()->password);
+    }
+
+    public function test_anche_l_agente_riceve_il_link_di_reset(): void
+    {
+        Notification::fake();
+        $agente = $this->agente('agente@example.test');
+
+        $this->postJson('/api/forgot-password', ['email' => 'agente@example.test'])->assertOk();
+
+        $token = null;
+        Notification::assertSentTo($agente, ResetPassword::class, function ($n) use (&$token) {
+            $token = $n->token;
+
+            return true;
+        });
+
+        $this->postJson('/api/reset-password', [
+            'email' => 'agente@example.test', 'token' => $token,
+            'password' => 'nuova-password-agente', 'password_confirmation' => 'nuova-password-agente',
+        ])->assertOk();
+
+        $this->postJson('/api/login', ['email' => 'agente@example.test', 'password' => 'nuova-password-agente'])->assertOk();
     }
 
     public function test_flusso_agente_resta_invariato(): void

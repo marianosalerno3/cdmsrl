@@ -31,11 +31,10 @@ async function submit() {
       }
       router.push(route.query.redirect || { name: 'dashboard' })
     } else {
-      const { data } = await api.post('/forgot-password', { email: form.value.email })
-      // i clienti B2B non hanno il link via email: l'API indica di contattare il backoffice
-      notice.value = String(data?.message || '').startsWith('Per reimpostare')
-        ? data.message
-        : 'Se l’indirizzo è registrato, riceverai un’email con le istruzioni.'
+      // agenti e clienti B2B: stesso modulo, l'email contiene il link per scegliere una nuova password
+      await api.post('/forgot-password', { email: form.value.email })
+      notice.value =
+        'Se l’indirizzo è registrato, riceverai un’email con il link per scegliere una nuova password (controlla anche lo spam).'
     }
   } catch (e) {
     error.value = errorMessage(e, 'Credenziali non valide.')
