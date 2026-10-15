@@ -170,7 +170,7 @@ onMounted(async () => {
             <template v-if="cart.programmato.value">Ordine programmato: la spedizione viene calcolata dal commerciale in fase di evasione.</template>
             <template v-else>
               Pronto: {{ money(config.spedizione_pronto_fissa) }} fino a {{ money(config.spedizione_pronto_soglia) }};
-              da {{ money(config.spedizione_pronto_soglia) }} in su {{ config.spedizione_pronto_perc }}% sul totale ordine, arrotondato all'euro per eccesso.
+              da {{ money(config.spedizione_pronto_soglia) }} in su {{ config.spedizione_pronto_perc }}% sul totale ordine, arrotondato all'euro per eccesso (minimo {{ money(config.spedizione_pronto_fissa) }}).
             </template>
           </p>
           <div class="flex justify-between text-zinc-500">

@@ -34,8 +34,8 @@ class PriceService
     /**
      * Spese di spedizione di un ordine.
      *  - PRONTO (non programmato): spesa fissa fino alla soglia, oltre (soglia inclusa) una percentuale
-     *    sul totale merce dell'ordine (imponibile prima di spedizione e IVA), arrotondata per eccesso all'euro.
-     *    Default 10 € fino a 300 €, da 300 € 3%.
+     *    sul totale merce dell'ordine (imponibile prima di spedizione e IVA), arrotondata per eccesso all'euro e mai
+     *    inferiore alla spesa fissa. Default 10 € fino a 300 €, da 300 € 3% (minimo 10 €).
      *  - PROGRAMMATO: nessuna spesa a carrello (0): la calcola il commerciale quando evade l'ordine.
      */
     public function shippingFor(float $subtotale, bool $programmato): float
@@ -48,10 +48,13 @@ class PriceService
         $soglia = (float) AppConfig::get('spedizione_pronto_soglia', 300);
         $perc = (float) AppConfig::get('spedizione_pronto_perc', 3);
 
-        // la percentuale si arrotonda sempre per eccesso all'euro intero (es. 15,75 € → 16 €)
-        return $subtotale >= $soglia
-            ? (float) ceil(round($subtotale * $perc / 100, 2))
-            : round($fissa, 2);
+        if ($subtotale < $soglia) {
+            return round($fissa, 2);
+        }
+
+        // la percentuale si arrotonda sempre per eccesso all'euro intero (es. 15,75 € → 16 €) e non scende mai
+        // sotto l'importo fisso: così la spesa non diminuisce all'aumentare dell'ordine.
+        return max(round($fissa, 2), (float) ceil(round($subtotale * $perc / 100, 2)));
     }
 
     public function minOrderAmount(): float
