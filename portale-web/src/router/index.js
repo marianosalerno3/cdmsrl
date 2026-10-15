@@ -10,6 +10,8 @@ const routes = [
     component: () => import('@/views/RegisterB2BView.vue'),
     meta: { public: true },
   },
+  { path: '/privacy', name: 'privacy', component: () => import('@/views/PrivacyView.vue'), meta: { public: true } },
+  { path: '/condizioni', name: 'condizioni', component: () => import('@/views/TerminiView.vue'), meta: { public: true } },
   {
     path: '/reset-password',
     name: 'reset-password',

@@ -31,7 +31,7 @@ class Cliente extends Authenticatable
     protected $fillable = [
         'agente_id', 'codice_cliente_erp', 'tipo',
         'ragione_sociale', 'nome', 'cognome', 'email', 'password', 'telefono',
-        'stato_richiesta', 'approvato_at', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
+        'stato_richiesta', 'approvato_at', 'privacy_accettata_at', 'privacy_versione', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
         'tipo_listino', 'attivo', 'contrassegno_abilitato',
         'indirizzo', 'cap', 'citta', 'provincia', 'nazione',
         'criterio_sconto', 'zona', 'nazione_erp', 'tipologia_fe', 'tipologia_codice_fe',
@@ -47,6 +47,7 @@ class Cliente extends Authenticatable
             'tipo' => ClienteTipo::class,
             'stato_richiesta' => RichiestaStato::class,
             'approvato_at' => 'datetime',
+            'privacy_accettata_at' => 'datetime',
             'tipo_listino' => ListinoTipo::class,
             'attivo' => 'boolean',
             'contrassegno_abilitato' => 'boolean',

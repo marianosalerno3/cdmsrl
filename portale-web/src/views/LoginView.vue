@@ -82,6 +82,10 @@ async function submit() {
         <RouterLink to="/register-b2b" class="text-sm font-semibold text-zinc-500 hover:text-ink">
           Nuovo cliente? Registrati come B2B (l'accesso viene attivato dopo l'approvazione)
         </RouterLink>
+        <p class="text-xs text-zinc-400">
+          <RouterLink to="/privacy" class="underline">Privacy</RouterLink> ·
+          <RouterLink to="/condizioni" class="underline">Condizioni d'uso</RouterLink>
+        </p>
       </div>
     </div>
   </div>

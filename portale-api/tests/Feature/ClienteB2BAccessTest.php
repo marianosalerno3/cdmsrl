@@ -72,6 +72,7 @@ class ClienteB2BAccessTest extends TestCase
             'password' => 'una-password-lunga',
             'password_confirmation' => 'una-password-lunga',
             'pec' => 'nuova@pec.example.test',
+            'accetto_privacy' => true,
             'indirizzo' => 'Via Milano 5', 'cap' => '20100', 'citta' => 'Milano', 'provincia' => 'MI',
         ];
     }
@@ -117,6 +118,25 @@ class ClienteB2BAccessTest extends TestCase
 
         $cliente->update(['password' => 'nuova-password-1']);
         Mail::assertQueued(ClienteApprovatoMail::class, 1);
+    }
+
+    public function test_registrazione_richiede_il_consenso_e_ne_conserva_la_prova(): void
+    {
+        Mail::fake();
+        $senza = $this->registrazione();
+        unset($senza['accetto_privacy']);
+
+        $this->postJson('/api/register-b2b', $senza)
+            ->assertStatus(422)->assertJsonValidationErrors('accetto_privacy');
+        $this->postJson('/api/register-b2b', $senza + ['accetto_privacy' => false])
+            ->assertStatus(422)->assertJsonValidationErrors('accetto_privacy');
+        $this->assertSame(0, Cliente::count());
+
+        $this->postJson('/api/register-b2b', $this->registrazione())->assertCreated();
+
+        $c = Cliente::where('email', 'nuova@example.test')->firstOrFail();
+        $this->assertNotNull($c->privacy_accettata_at);
+        $this->assertSame(config('portale.privacy_versione'), $c->privacy_versione);
     }
 
     public function test_registrazione_richiede_pec_o_codice_sdi(): void

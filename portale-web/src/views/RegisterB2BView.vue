@@ -18,6 +18,7 @@ const form = ref({
   provincia: '',
   agente_codice: '',
 })
+const accettoPrivacy = ref(false)
 const documenti = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -33,10 +34,15 @@ async function submit() {
     error.value = 'Le due password non coincidono.'
     return
   }
+  if (!accettoPrivacy.value) {
+    error.value = 'Per registrarti devi accettare l’informativa privacy e le condizioni d’uso.'
+    return
+  }
   loading.value = true
   try {
     const fd = new FormData()
     Object.entries(form.value).forEach(([k, v]) => v && fd.append(k, v))
+    fd.append('accetto_privacy', '1')
     documenti.value.forEach((f) => fd.append('documenti[]', f))
     await api.post('/register-b2b', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     done.value = true
@@ -154,6 +160,17 @@ async function submit() {
             @change="onFiles"
           />
         </div>
+
+        <label class="flex items-start gap-3 rounded-lg bg-zinc-50 px-3 py-3 text-sm sm:col-span-2">
+          <input v-model="accettoPrivacy" type="checkbox" required class="mt-0.5 size-4 shrink-0 accent-black" />
+          <span>
+            Dichiaro di aver letto e accetto l’<RouterLink to="/privacy" target="_blank" class="font-semibold underline"
+              >informativa sulla privacy</RouterLink
+            >
+            e le <RouterLink to="/condizioni" target="_blank" class="font-semibold underline">condizioni d’uso del
+            portale</RouterLink>. <span class="text-zinc-500">*</span>
+          </span>
+        </label>
 
         <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
           {{ error }}

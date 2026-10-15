@@ -31,6 +31,7 @@ class RegisterB2BController extends Controller
             'pec' => ['required_without:codice_sdi', 'nullable', 'email'],
             'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'accetto_privacy' => ['accepted'],
             'telefono' => ['nullable', 'string', 'max:40'],
             'indirizzo' => ['required', 'string', 'max:255'],
             'cap' => ['required', 'string', 'max:16'],
@@ -44,6 +45,7 @@ class RegisterB2BController extends Controller
             'codice_sdi.required_without' => 'Inserisci il Codice SDI oppure la PEC (almeno uno dei due).',
             'codice_sdi.regex' => 'Il Codice SDI deve essere di 6 o 7 caratteri (lettere e numeri).',
             'pec.email' => 'La PEC non è un indirizzo email valido.',
+            'accetto_privacy.accepted' => 'Per registrarti devi accettare l\'informativa privacy e le condizioni d\'uso del portale.',
         ]);
 
         $email = mb_strtolower(trim($data['email']));
@@ -82,6 +84,8 @@ class RegisterB2BController extends Controller
             'pec' => $data['pec'] ?? null,
             'email' => $email,
             'password' => $data['password'],
+            'privacy_accettata_at' => now(),
+            'privacy_versione' => config('portale.privacy_versione'),
             'telefono' => $data['telefono'] ?? null,
             'indirizzo' => $data['indirizzo'],
             'cap' => $data['cap'],

@@ -71,6 +71,12 @@ class ClienteResource extends Resource
                 Forms\Components\Toggle::make('attivo')->default(true),
                 Forms\Components\Toggle::make('contrassegno_abilitato')->label('Contrassegno abilitato'),
             ]),
+            Forms\Components\Section::make('Consenso privacy')->schema([
+                Forms\Components\Placeholder::make('consenso')->label('')->content(fn (?Cliente $record): string => $record?->privacy_accettata_at
+                    ? 'Informativa privacy e condizioni d\'uso accettate il '.$record->privacy_accettata_at->format('d/m/Y H:i')
+                        .' (versione '.($record->privacy_versione ?: '—').')'
+                    : 'Nessun consenso registrato: cliente importato da ERP o inserito da un agente.'),
+            ])->visibleOn('edit'),
         ]);
     }
 
@@ -87,6 +93,8 @@ class ClienteResource extends Resource
                 Tables\Columns\TextColumn::make('partita_iva')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('tipo_listino')->label('Listino')->badge()->toggleable(),
                 Tables\Columns\IconColumn::make('attivo')->boolean(),
+                Tables\Columns\TextColumn::make('privacy_accettata_at')->label('Consenso privacy')
+                    ->dateTime('d/m/Y H:i')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('accesso')->label('Accesso portale')->boolean()
                     ->state(fn (Cliente $r) => $r->puoAccedere())->toggleable(),
                 Tables\Columns\IconColumn::make('contrassegno_abilitato')->label('Contrassegno')->boolean()->toggleable(),
