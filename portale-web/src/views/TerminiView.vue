@@ -64,14 +64,11 @@ import { COMPANY_NAME } from '@/lib/brand'
 
       <h2 class="pt-2 text-base font-bold text-ink">7. Legge applicabile</h2>
       <p>
-        Le presenti condizioni sono regolate dalla legge italiana. Per ogni controversia è competente il foro di
-        <strong>[DA COMPLETARE: es. Nola/Napoli]</strong>.
+        Le presenti condizioni sono regolate dalla legge italiana. Per ogni controversia è competente in via esclusiva il
+        <strong>foro di Napoli</strong>.
       </p>
 
-      <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Testo di lavoro: i punti tra parentesi quadre vanno completati e il testo va fatto verificare dal consulente
-        legale prima della pubblicazione.
-      </p>
+      <p class="text-xs text-zinc-500">CDM SRL · P.IVA 05325151214 · Via Boscofangone, Nola (NA)</p>
     </div>
   </div>
 </template>

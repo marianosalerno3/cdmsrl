@@ -14,8 +14,8 @@ import { COMPANY_NAME } from '@/lib/brand'
 
       <h2 class="pt-2 text-base font-bold text-ink">1. Titolare del trattamento</h2>
       <p>
-        Il titolare del trattamento è <strong>[DA COMPLETARE: ragione sociale]</strong>, con sede in Via Boscofangone,
-        Nola (NA), P.IVA <strong>[DA COMPLETARE]</strong>. Per qualsiasi richiesta sui tuoi dati:
+        Il titolare del trattamento è <strong>CDM SRL</strong>, con sede in Via Boscofangone, Nola (NA), P.IVA
+        <strong>05325151214</strong>. Per qualsiasi richiesta sui tuoi dati:
         <a href="mailto:info@oltretempo.it" class="underline">info@oltretempo.it</a>.
       </p>
 
@@ -76,10 +76,6 @@ import { COMPANY_NAME } from '@/lib/brand'
         l'accesso: senza di essi non è possibile completare la registrazione.
       </p>
 
-      <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Testo di lavoro: i punti tra parentesi quadre vanno completati e l'informativa va fatta verificare dal
-        consulente legale prima della pubblicazione.
-      </p>
     </div>
   </div>
 </template>
