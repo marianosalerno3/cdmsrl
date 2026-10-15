@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\AppConfig;
 use App\Settings\IntegrationSettings;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -31,6 +32,17 @@ class ConfigurazioniSistema extends Page implements HasForms
 
     public ?array $data = [];
 
+    /** Chiavi AppConfig delle regole commerciali modificabili da questa pagina. */
+    private const REGOLE = [
+        'vat',
+        'spedizione_pronto_fissa',
+        'spedizione_pronto_soglia',
+        'spedizione_pronto_perc',
+        'importo_minimo_ordine',
+        'giorni_evasione_programmati',
+        'metodi_pagamento',
+    ];
+
     public function mount(): void
     {
         $s = app(IntegrationSettings::class);
@@ -47,6 +59,8 @@ class ConfigurazioniSistema extends Page implements HasForms
             'erp_password' => $s->erp_password,
             'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
             'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
+            // regole commerciali del portale B2B (valori correnti di AppConfig::payload())
+            ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
         ]);
     }
 
@@ -64,6 +78,41 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('shopify_markup_perc')->label('Ricarico B2C (%)')
                             ->numeric()->default(0)->suffix('%')
                             ->helperText('Applicato sopra il prezzo di listino B2B quando un prodotto viene inviato a Shopify. Es. 100 = prezzo raddoppiato, 0 = nessun ricarico.')
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Regole commerciali (Portale B2B)')
+                    ->description('Valgono per gli ordini di agenti e clienti. Le stagioni "programmate" si impostano in Catalogo → Stagioni.')
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('vat')->label('IVA')
+                            ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
+                            ->helperText('Aliquota applicata a merce e spedizione.'),
+                        TextInput::make('importo_minimo_ordine')->label('Importo minimo ordine')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Sul totale merce, IVA esclusa. 0 = nessun minimo.'),
+                        TextInput::make('giorni_evasione_programmati')->label('Evasione ordini programmati')
+                            ->numeric()->minValue(0)->integer()->suffix('giorni')->required()
+                            ->helperText('Giorni indicativi per gli ordini di stagioni programmate.'),
+
+                        TextInput::make('spedizione_pronto_fissa')->label('Spedizione pronto — importo fisso')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Per ordini di pronto sotto la soglia.'),
+                        TextInput::make('spedizione_pronto_soglia')->label('Spedizione pronto — soglia')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Da questo totale merce in su si applica la percentuale.'),
+                        TextInput::make('spedizione_pronto_perc')->label('Spedizione pronto — percentuale')
+                            ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
+                            ->helperText('% sul totale merce, oltre la soglia. Gli ordini programmati non hanno spese a carrello.'),
+
+                        CheckboxList::make('metodi_pagamento')->label('Metodi di pagamento offerti')
+                            ->options([
+                                'stripe' => 'Carta di credito (Stripe)',
+                                'bonifico' => 'Bonifico bancario',
+                                'contrassegno' => 'Contrassegno (solo clienti abilitati)',
+                                'rimessa' => 'Rimessa diretta',
+                            ])
+                            ->columns(2)->required()->minItems(1)
                             ->columnSpanFull(),
                     ]),
 
@@ -111,6 +160,14 @@ class ConfigurazioniSistema extends Page implements HasForms
         $s->save();
 
         AppConfig::put('shopify_markup_perc', (float) ($state['shopify_markup_perc'] ?? 0));
+
+        foreach (self::REGOLE as $chiave) {
+            if (! array_key_exists($chiave, $state)) {
+                continue;
+            }
+            $valore = $state[$chiave];
+            AppConfig::put($chiave, $chiave === 'metodi_pagamento' ? array_values((array) $valore) : (float) $valore);
+        }
 
         Notification::make()->success()->title('Configurazioni salvate')->send();
     }

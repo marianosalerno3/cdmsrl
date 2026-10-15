@@ -4,7 +4,12 @@ namespace Tests\Feature;
 
 use App\Enums\ListinoTipo;
 use App\Enums\RichiestaStato;
+use App\Filament\Pages\ConfigurazioniSistema;
 use App\Mail\ClienteApprovatoMail;
+use App\Models\AppConfig;
+use App\Models\User;
+use Filament\Facades\Filament;
+use Livewire\Livewire;
 use App\Mail\NuovaRegistrazioneB2BMail;
 use App\Models\Agente;
 use App\Models\Cliente;
@@ -269,6 +274,52 @@ class ClienteB2BAccessTest extends TestCase
         $this->app['auth']->forgetGuards(); // i test riusano la stessa istanza della guard: simula una nuova richiesta
 
         $this->withToken($token)->getJson('/api/me')->assertForbidden();
+    }
+
+    public function test_ordine_rifiuta_un_metodo_di_pagamento_disattivato(): void
+    {
+        Mail::fake();
+        AppConfig::put('metodi_pagamento', ['bonifico']);
+        $cliente = $this->cliente(['contrassegno_abilitato' => true]);
+        $v = $this->variante();
+        $righe = [['variante_id' => $v->id, 'quantita' => 1]];
+
+        $this->actingAs($cliente, 'sanctum')->postJson('/api/orders', ['metodo_pagamento' => 'contrassegno', 'righe' => $righe])
+            ->assertStatus(422)->assertJsonValidationErrors('metodo_pagamento');
+
+        $this->actingAs($cliente, 'sanctum')->postJson('/api/orders', ['metodo_pagamento' => 'bonifico', 'righe' => $righe])
+            ->assertCreated();
+    }
+
+    public function test_regole_commerciali_modificate_dal_pannello_arrivano_al_portale(): void
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password-admin', 'is_active' => true]);
+
+        Filament::setCurrentPanel(Filament::getPanel('access'));
+
+        Livewire::actingAs($admin)->test(ConfigurazioniSistema::class)
+            ->fillForm([
+                'vat' => 10,
+                'importo_minimo_ordine' => 250,
+                'giorni_evasione_programmati' => 45,
+                'spedizione_pronto_fissa' => 12,
+                'spedizione_pronto_soglia' => 400,
+                'spedizione_pronto_perc' => 3,
+                'metodi_pagamento' => ['bonifico', 'stripe'],
+            ])
+            ->call('salva')
+            ->assertHasNoFormErrors();
+
+        $cliente = $this->cliente();
+        $this->actingAs($cliente, 'sanctum')->getJson('/api/app-config')
+            ->assertOk()
+            ->assertJsonPath('vat', 10)
+            ->assertJsonPath('importo_minimo_ordine', 250)
+            ->assertJsonPath('giorni_evasione_programmati', 45)
+            ->assertJsonPath('spedizione_pronto_fissa', 12)
+            ->assertJsonPath('spedizione_pronto_soglia', 400)
+            ->assertJsonPath('spedizione_pronto_perc', 3)
+            ->assertJsonPath('metodi_pagamento', ['bonifico', 'stripe']);
     }
 
     public function test_recupero_password_del_cliente_rimanda_al_backoffice(): void

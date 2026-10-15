@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\AppConfig;
 use App\Models\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreOrderRequest extends FormRequest
 {
@@ -19,7 +21,8 @@ class StoreOrderRequest extends FormRequest
             'cliente_id' => $this->user() instanceof Cliente
                 ? ['nullable', 'uuid']
                 : ['required', 'uuid', 'exists:clienti,id'],
-            'metodo_pagamento' => ['required', 'in:stripe,bonifico,contrassegno,rimessa'],
+            // solo i metodi attivi in Configurazioni → Regole commerciali
+            'metodo_pagamento' => ['required', Rule::in(AppConfig::payload()['metodi_pagamento'])],
             'note_agente' => ['nullable', 'string', 'max:2000'],
             'indirizzo_spedizione' => ['nullable', 'string', 'max:500'],
 
