@@ -47,7 +47,7 @@ class AppConfig extends Model
             // spedizione ordini di pronto (non programmati): fissa fino alla soglia, poi % sul totale merce
             'spedizione_pronto_fissa' => (float) static::get('spedizione_pronto_fissa', 10),
             'spedizione_pronto_soglia' => (float) static::get('spedizione_pronto_soglia', 300),
-            'spedizione_pronto_perc' => (float) static::get('spedizione_pronto_perc', 5),
+            'spedizione_pronto_perc' => (float) static::get('spedizione_pronto_perc', 3),
             'importo_minimo_ordine' => (float) static::get('importo_minimo_ordine', (float) env('BIZ_MIN_ORDER_AMOUNT', 0)),
             'giorni_evasione_programmati' => (int) static::get('giorni_evasione_programmati', (int) env('BIZ_SCHEDULED_ORDER_DAYS', 30)),
             'metodi_pagamento' => static::get('metodi_pagamento', ['stripe', 'bonifico', 'contrassegno']),

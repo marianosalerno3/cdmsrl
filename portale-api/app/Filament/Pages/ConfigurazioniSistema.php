@@ -103,7 +103,7 @@ class ConfigurazioniSistema extends Page implements HasForms
                             ->helperText('Da questo totale merce in su si applica la percentuale.'),
                         TextInput::make('spedizione_pronto_perc')->label('Spedizione pronto — percentuale')
                             ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
-                            ->helperText('% sul totale merce, oltre la soglia. Gli ordini programmati non hanno spese a carrello.'),
+                            ->helperText('% sul totale merce, oltre la soglia, arrotondata per eccesso all\'euro (15,75 € → 16 €). Gli ordini programmati non hanno spese a carrello.'),
 
                         CheckboxList::make('metodi_pagamento')->label('Metodi di pagamento offerti')
                             ->options([

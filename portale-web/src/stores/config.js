@@ -7,7 +7,7 @@ const state = reactive({
     spese_spedizione: 0,
     spedizione_pronto_fissa: 10,
     spedizione_pronto_soglia: 300,
-    spedizione_pronto_perc: 5,
+    spedizione_pronto_perc: 3,
     importo_minimo_ordine: 0,
     giorni_evasione_programmati: 30,
     metodi_pagamento: ['bonifico', 'contrassegno', 'stripe'],

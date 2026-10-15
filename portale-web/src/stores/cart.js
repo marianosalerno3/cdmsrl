@@ -40,7 +40,7 @@ export function useCart() {
     if (programmato.value) return 0 // ordine programmato: la spedizione la calcola il commerciale
     const soglia = Number(config.spedizione_pronto_soglia ?? 300)
     return subtotal.value >= soglia
-      ? round2((subtotal.value * Number(config.spedizione_pronto_perc ?? 5)) / 100)
+      ? Math.ceil(round2((subtotal.value * Number(config.spedizione_pronto_perc ?? 3)) / 100)) // sempre per eccesso all'euro
       : Number(config.spedizione_pronto_fissa ?? 10)
   })
   const vatRate = computed(() => Number(config.vat ?? 22))
