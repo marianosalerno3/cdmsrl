@@ -2,6 +2,7 @@
 import { onMounted, computed, watch } from 'vue'
 import { useCustomer } from '@/stores/customer'
 import { useAuth } from '@/stores/auth'
+import { listinoLabel } from '@/lib/format'
 
 const { state, selected, load, select } = useCustomer()
 const { isCliente } = useAuth()
@@ -36,7 +37,7 @@ function onChange(e) {
       </option>
     </select>
     <p v-if="selected" class="mt-1 text-xs text-zinc-500">
-      Listino <span class="font-semibold">{{ selected.listino }}</span>
+      Listino <span class="font-semibold">{{ listinoLabel(selected.listino) }}</span>
       <template v-if="selected.contrassegno_abilitato"> · contrassegno abilitato</template>
     </p>
   </div>

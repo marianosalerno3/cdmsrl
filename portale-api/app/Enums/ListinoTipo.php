@@ -19,9 +19,10 @@ enum ListinoTipo: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Standard => 'Standard',
-            self::Plus5 => 'Standard +5%',
-            self::Plus10 => 'Standard +10%',
+            // nomi usati in azienda: OT = listino base di WinMino, +5/+10 sono ricarichi applicati dal portale
+            self::Standard => 'OT',
+            self::Plus5 => 'OT+5',
+            self::Plus10 => 'OT+10',
             self::Outlet => 'Outlet',
         };
     }

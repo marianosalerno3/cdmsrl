@@ -4,7 +4,7 @@ import { api, errorMessage } from '@/lib/api'
 import { useAuth } from '@/stores/auth'
 import { useConfig } from '@/stores/config'
 import { useCustomer } from '@/stores/customer'
-import { money, date } from '@/lib/format'
+import { money, date, listinoLabel } from '@/lib/format'
 import Spinner from '@/components/Spinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -93,7 +93,7 @@ onMounted(async () => {
       </div>
       <div v-else class="card p-5">
         <p class="text-sm text-zinc-500">Il tuo listino</p>
-        <p class="mt-1 text-3xl font-bold capitalize">{{ auth.user?.listino_default || 'standard' }}</p>
+        <p class="mt-1 text-3xl font-bold">{{ listinoLabel(auth.user?.listino_default) }}</p>
         <RouterLink to="/catalog" class="btn-link">Vai al catalogo</RouterLink>
       </div>
       <div class="card p-5">

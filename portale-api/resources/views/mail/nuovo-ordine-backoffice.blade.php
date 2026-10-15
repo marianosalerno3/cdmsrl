@@ -15,7 +15,7 @@ Un agente ha inviato un nuovo ordine. Prendilo in carico e caricalo su WinMino.
 | Agente | {{ $ordine->agente?->nome ?? '—' }} |
 | Data | {{ $ordine->data_ordine?->format('d/m/Y') }} |
 | Metodo di pagamento | {{ $ordine->metodo_pagamento?->getLabel() ?? '—' }} |
-| Listino | {{ $ordine->listino_applicato?->value ?? '—' }} |
+| Listino | {{ $ordine->listino_applicato?->getLabel() ?? '—' }} |
 | Pezzi | {{ $ordine->totale_pezzi }} |
 | **Totale (IVA incl.)** | **€ {{ number_format($ordine->totale, 2, ',', '.') }}** |
 @endcomponent
