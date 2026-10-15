@@ -37,8 +37,7 @@ import { COMPANY_NAME } from '@/lib/brand'
         </li>
         <li>
           Disponibilità, prezzi e informazioni possono cambiare: l'ordine inviato dal portale è una richiesta che viene
-          presa in carico e confermata dal nostro ufficio commerciale. <strong>[DA CONFERMARE: modalità e tempi di
-          conferma dell'ordine]</strong>
+          presa in carico e confermata dal nostro ufficio commerciale, che ti contatta in caso di variazioni.
         </li>
         <li>Pagamento, consegna e resi seguono le condizioni commerciali concordate con la nostra azienda.</li>
       </ul>
