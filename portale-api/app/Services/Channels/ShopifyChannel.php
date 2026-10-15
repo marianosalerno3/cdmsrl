@@ -144,7 +144,7 @@ class ShopifyChannel implements EcommerceChannel
 
         return [
             'title' => $p->nome,
-            'body_html' => $p->descrizione ?? '',
+            'body_html' => $this->bodyHtml($p),
             'product_type' => $p->categoria?->nome,
             // Tag usati per le collezioni Shopify per linea/stagione (es. "Linea: Clara G", "PE27").
             'tags' => collect([$p->linea?->value ? "Linea: {$p->linea->value}" : null, $p->stagione?->codice, $p->genere?->nome])->filter()->implode(', '),
@@ -160,6 +160,41 @@ class ShopifyChannel implements EcommerceChannel
             ])->values()->all(),
             'images' => $p->immagini->map(fn ($i) => ['src' => $i->url])->values()->all(),
         ];
+    }
+
+    /**
+     * Descrizione del prodotto su Shopify: testo web (se c'è) + composizione e tessuto presi da WinMino.
+     * La composizione arriva in maiuscolo e senza separatori ("POLIESTERE 95% ELASTOMERO 5%"): la rendiamo leggibile.
+     */
+    private function bodyHtml(Prodotto $p): string
+    {
+        $parti = [];
+
+        if (filled($p->descrizione)) {
+            $parti[] = '<p>'.nl2br(e(trim((string) $p->descrizione))).'</p>';
+        }
+        if (filled($p->composizione)) {
+            $parti[] = '<p><strong>Composizione:</strong> '.e(self::formattaComposizione((string) $p->composizione)).'</p>';
+        }
+        if (filled($p->tessuto)) {
+            $parti[] = '<p><strong>Tessuto:</strong> '.e(mb_convert_case(mb_strtolower(trim((string) $p->tessuto)), MB_CASE_TITLE)).'</p>';
+        }
+
+        return implode("\n", $parti);
+    }
+
+    /** "VISCOSA 65% NYLON 32% SPANDEX 3%" → "Viscosa 65%, Nylon 32%, Spandex 3%". */
+    public static function formattaComposizione(string $raw): string
+    {
+        $raw = trim($raw);
+
+        if (preg_match_all('/([^\d%,;]+?)\s*(\d+(?:[.,]\d+)?)\s*%/u', $raw, $m, PREG_SET_ORDER) && $m !== []) {
+            return collect($m)
+                ->map(fn ($x) => mb_convert_case(mb_strtolower(trim($x[1], " \t-/")), MB_CASE_TITLE).' '.$x[2].'%')
+                ->implode(', ');
+        }
+
+        return mb_convert_case(mb_strtolower($raw), MB_CASE_TITLE);
     }
 
     private function firstLocationId(): ?int

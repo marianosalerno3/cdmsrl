@@ -251,3 +251,13 @@ Per aggiungere stagioni/linee basta estendere la variabile (es. `CG:PE27,CG:AI27
 - [x] tabella `destinazioni` + model, campi ERP su schema, config `winmino.php`
 - [x] notifica ordine al backoffice CDM (`NuovoOrdineBackofficeMail`, `BACKOFFICE_EMAIL`)
 - [ ] clienti/agenti da WinMino; immagini; depositi giacenza; codici ordine di CDM
+
+## Regole fisse sulla descrizione prodotto su Shopify
+
+La descrizione (`body_html`) inviata a Shopify da `ShopifyChannel::bodyHtml()` è **sempre** costruita così, a ogni invio e per ogni prodotto:
+
+1. testo web (`DESCRIZIONEWEB` di WinMino), se presente;
+2. **Composizione** (`COMPOSIZIONE` di WinMino) resa leggibile: `POLIESTERE 95% ELASTOMERO 5%` → `Composizione: Poliestere 95%, Elastomero 5%`;
+3. **Tessuto**, se presente.
+
+Modificare la composizione in WinMino e rilanciare `sync:prodotti` seguito dall'invio a Shopify ("Invia Catalogo Completo") aggiorna la scheda. Non modificare la descrizione a mano su Shopify: viene sovrascritta al prossimo invio completo.
