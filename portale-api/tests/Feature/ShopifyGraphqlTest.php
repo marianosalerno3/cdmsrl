@@ -133,6 +133,17 @@ class ShopifyGraphqlTest extends TestCase
         $this->assertNull($p->fresh()->shopify_product_id);
     }
 
+    public function test_le_giacenze_non_creano_di_nascosto_un_prodotto_mai_inviato(): void
+    {
+        Http::fake();
+        $p = $this->prodotto(11, 10); // 110 varianti, mai inviato
+
+        $res = $this->canale()->pushInventory($p);
+
+        $this->assertTrue($res->success);
+        Http::assertNothingSent();
+    }
+
     public function test_fino_a_100_varianti_resta_sul_rest(): void
     {
         $p = $this->prodotto(10, 10); // 100 varianti: limite incluso

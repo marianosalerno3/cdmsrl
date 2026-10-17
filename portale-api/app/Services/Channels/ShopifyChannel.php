@@ -91,6 +91,11 @@ class ShopifyChannel implements EcommerceChannel
     {
         $prodotto->loadMissing('varianti');
 
+        // un prodotto mai inviato lo decide CDM (pulsante "Invia a Shopify"): qui non lo si crea di nascosto
+        if (blank($prodotto->shopify_product_id)) {
+            return ChannelResult::ok('Prodotto non ancora inviato a Shopify: giacenze non inviate');
+        }
+
         // con tante varianti l'aggiornamento una per una (2 chiamate ciascuna) supererebbe il tempo del job:
         // si rimanda l'intero prodotto con productSet, che aggiorna anche le giacenze in un'unica chiamata
         if ($prodotto->varianti->count() > self::REST_MAX_VARIANTI) {

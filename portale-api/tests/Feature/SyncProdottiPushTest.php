@@ -88,14 +88,18 @@ class SyncProdottiPushTest extends TestCase
         return Queue::pushed(SyncProdottoEcommerce::class, fn ($j) => $j->mode === $mode)->count();
     }
 
-    public function test_un_prodotto_nuovo_parte_completo_poi_solo_le_giacenze_che_cambiano(): void
+    public function test_un_prodotto_mai_inviato_non_parte_da_solo_poi_solo_le_giacenze_che_cambiano(): void
     {
-        // 1° import: prodotto nuovo e mai inviato → push completo
+        // 1° import: prodotto nuovo, mai inviato a Shopify da CDM → non si accoda niente
         $this->importa();
-        $this->assertSame(1, $this->accodati('full'));
-        $this->assertSame(0, $this->accodati('inventory'));
+        Queue::assertNothingPushed();
 
-        // simula l'avvenuto invio a Shopify
+        // cambia una giacenza: sempre niente, finché CDM non lo manda su Shopify
+        $this->esistenza['ROSSO|44'] = 9;
+        $this->importa();
+        Queue::assertNothingPushed();
+
+        // CDM lo invia a Shopify (simulato)
         Prodotto::where('codice', 'ART1')->update(['shopify_product_id' => '999']);
         $this->svuotaCoda();
 

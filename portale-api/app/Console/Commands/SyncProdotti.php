@@ -217,11 +217,11 @@ class SyncProdotti extends Command
     // ------------------------------------------------------------------ helpers
 
     /**
-     * Verso gli e-commerce va solo ciò che è cambiato in questo import:
-     *  - prodotto nuovo, o con dati/prezzi/varianti cambiati → push completo
+     * Verso gli e-commerce va solo ciò che è cambiato in questo import, e solo per i prodotti che
+     * CDM ha già mandato su Shopify (con il pulsante "Invia a Shopify"): i nuovi non partono da soli.
+     *  - dati/prezzi/varianti cambiati → push completo
      *  - solo la giacenza cambiata → push delle sole giacenze (molto più leggero)
-     *  - prodotto attivo mai inviato (senza id su Shopify) → push completo
-     * Il resto resta com'è: la rete di sicurezza notturna (sync:giacenze) riallinea comunque le giacenze.
+     * La rete di sicurezza notturna (sync:giacenze) riallinea comunque le giacenze.
      *
      * @param  array<string,bool>  $cambiGiacenza
      * @param  array<string,bool>  $cambiAnagrafica
@@ -234,24 +234,24 @@ class SyncProdotti extends Command
             return;
         }
 
-        $mai = Prodotto::where('attivo', true)->whereNull('shopify_product_id')->pluck('id')->flip()->all();
-        $completi = array_keys($cambiAnagrafica + $mai);
+        $completi = array_keys($cambiAnagrafica);
         $soloGiacenze = array_diff(array_keys($cambiGiacenza), $completi);
 
-        $attivi = fn (array $ids) => Prodotto::where('attivo', true)->whereIn('id', $ids)->pluck('id');
+        $giaSuShopify = fn (array $ids) => Prodotto::where('attivo', true)
+            ->whereNotNull('shopify_product_id')->whereIn('id', $ids)->pluck('id');
 
         $nCompleti = 0;
-        foreach ($attivi($completi) as $id) {
+        foreach ($giaSuShopify($completi) as $id) {
             SyncProdottoEcommerce::dispatch($id, null, 'full');
             $nCompleti++;
         }
         $nGiacenze = 0;
-        foreach ($attivi($soloGiacenze) as $id) {
+        foreach ($giaSuShopify($soloGiacenze) as $id) {
             SyncProdottoEcommerce::dispatch($id, null, 'inventory');
             $nGiacenze++;
         }
 
-        $this->info("Push accodato: {$nCompleti} prodotti completi (nuovi o modificati), {$nGiacenze} solo giacenze.");
+        $this->info("Push accodato (solo prodotti già su Shopify): {$nCompleti} completi (dati o prezzi cambiati), {$nGiacenze} solo giacenze.");
     }
 
     /** @return list<array{0:string,1:string,2:string}> [linea, stagione, listino] */

@@ -140,6 +140,17 @@ class ProdottoResource extends Resource
                     Tables\Actions\BulkAction::make('pubblica')
                         ->icon('heroicon-o-eye')
                         ->action(fn ($records) => $records->each->update(['attivo' => true])),
+                    Tables\Actions\BulkAction::make('shopify')
+                        ->label('Invia a Shopify')
+                        ->icon('heroicon-o-shopping-bag')
+                        ->requiresConfirmation()
+                        ->modalHeading('Inviare i prodotti selezionati a Shopify?')
+                        ->modalDescription('Vengono creati (o aggiornati) su Shopify con prezzo, varianti, immagini e giacenze. Da quel momento restano allineati in automatico.')
+                        ->action(function ($records) {
+                            $records->each(fn (Prodotto $r) => SyncProdottoEcommerce::dispatch($r->id, 'shopify'));
+                            Notification::make()->success()->title($records->count().' prodotti in coda per Shopify')->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     Tables\Actions\BulkAction::make('nascondi')
                         ->icon('heroicon-o-eye-slash')
                         ->action(fn ($records) => $records->each->update(['attivo' => false])),
