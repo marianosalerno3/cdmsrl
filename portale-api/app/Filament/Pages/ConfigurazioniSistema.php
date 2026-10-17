@@ -1,0 +1,239 @@
+<?php
+
+namespace App\Filament\Pages;
+
+use App\Models\AppConfig;
+use App\Settings\IntegrationSettings;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
+
+class ConfigurazioniSistema extends Page implements HasForms
+{
+    use InteractsWithForms;
+
+    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+
+    protected static ?string $navigationGroup = 'Sistema';
+
+    protected static ?string $navigationLabel = 'Configurazioni';
+
+    protected static ?string $title = 'Configurazioni Sistema';
+
+    protected static string $view = 'filament.pages.configurazioni-sistema';
+
+    public ?array $data = [];
+
+    /** Chiavi AppConfig delle regole commerciali modificabili da questa pagina. */
+    private const REGOLE = [
+        'vat',
+        'spedizione_pronto_fissa',
+        'spedizione_pronto_soglia',
+        'spedizione_pronto_perc',
+        'importo_minimo_ordine',
+        'giorni_evasione_programmati',
+        'metodi_pagamento',
+    ];
+
+    public function mount(): void
+    {
+        $s = app(IntegrationSettings::class);
+
+        $this->form->fill([
+            'shopify_shop_domain' => $s->shopify_shop_domain,
+            'shopify_access_token' => $s->shopify_access_token,
+            'stripe_key' => $s->stripe_key,
+            'stripe_secret' => $s->stripe_secret,
+            'stripe_webhook_secret' => $s->stripe_webhook_secret,
+            'erp_driver' => $s->erp_driver,
+            'erp_base_url' => $s->erp_base_url,
+            'erp_username' => $s->erp_username,
+            'erp_password' => $s->erp_password,
+            'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
+            'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
+            // regole commerciali del portale B2B (valori correnti di AppConfig::payload())
+            ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
+        ]);
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Section::make('Shopify (B2C)')
+                    ->description('Access Token da Shopify Admin → Apps → Develop apps')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('shopify_shop_domain')->label('Shop Domain')
+                            ->helperText('es. mio-shop.myshopify.com — senza https://'),
+                        TextInput::make('shopify_access_token')->label('Access Token')->password()->revealable(),
+                        TextInput::make('shopify_markup_perc')->label('Ricarico B2C (%)')
+                            ->numeric()->default(0)->suffix('%')
+                            ->helperText('Applicato sopra il prezzo di listino B2B quando un prodotto viene inviato a Shopify. Es. 100 = prezzo raddoppiato, 0 = nessun ricarico.')
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Regole commerciali (Portale B2B)')
+                    ->description('Valgono per gli ordini di agenti e clienti. Le stagioni "programmate" si impostano in Catalogo → Stagioni.')
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('vat')->label('IVA')
+                            ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
+                            ->helperText('Aliquota applicata a merce e spedizione.'),
+                        TextInput::make('importo_minimo_ordine')->label('Importo minimo ordine')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Sul totale merce, IVA esclusa. 0 = nessun minimo.'),
+                        TextInput::make('giorni_evasione_programmati')->label('Evasione ordini programmati')
+                            ->numeric()->minValue(0)->integer()->suffix('giorni')->required()
+                            ->helperText('Giorni indicativi per gli ordini di stagioni programmate.'),
+
+                        TextInput::make('spedizione_pronto_fissa')->label('Spedizione pronto — importo fisso')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Per ordini di pronto sotto la soglia.'),
+                        TextInput::make('spedizione_pronto_soglia')->label('Spedizione pronto — soglia')
+                            ->numeric()->minValue(0)->prefix('€')->required()
+                            ->helperText('Da questo totale merce in su si applica la percentuale.'),
+                        TextInput::make('spedizione_pronto_perc')->label('Spedizione pronto — percentuale')
+                            ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
+                            ->helperText('% sul totale merce, oltre la soglia, arrotondata per eccesso all\'euro (15,75 € → 16 €). Gli ordini programmati non hanno spese a carrello.'),
+
+                        CheckboxList::make('metodi_pagamento')->label('Metodi di pagamento offerti')
+                            ->options([
+                                'stripe' => 'Carta di credito (Stripe)',
+                                'bonifico' => 'Bonifico bancario',
+                                'contrassegno' => 'Contrassegno (solo clienti abilitati)',
+                                'rimessa' => 'Rimessa diretta',
+                            ])
+                            ->columns(2)->required()->minItems(1)
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Stripe (Pagamenti B2B)')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('stripe_key')->label('Publishable Key'),
+                        TextInput::make('stripe_secret')->label('Secret Key')->password()->revealable(),
+                        TextInput::make('stripe_webhook_secret')->label('Webhook Secret')->password()->revealable(),
+                    ]),
+
+                Section::make('ERP (WinMino)')
+                    ->description('Webservice DataSnap. Vedi docs/winmino-integration.md.')
+                    ->columns(2)
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('erp_driver')->label('Driver')
+                            ->options(['null' => 'Nessuno', 'winmino' => 'WinMino'])
+                            ->default('null'),
+                        TextInput::make('erp_base_url')->label('Base URL')
+                            ->helperText('es. http://1.2.3.4:8080 — senza slash finale'),
+                        TextInput::make('erp_username')->label('Username'),
+                        TextInput::make('erp_password')->label('Password')->password()->revealable(),
+                    ]),
+
+                Section::make('Impostazioni Generali')
+                    ->schema([
+                        Toggle::make('sync_giacenze_automatica')
+                            ->label('Sincronizzazione giacenze automatica')
+                            ->helperText('Se attivo, ogni modifica giacenza viene propagata a Shopify.'),
+                    ]),
+            ])
+            ->statePath('data');
+    }
+
+    public function salva(): void
+    {
+        $s = app(IntegrationSettings::class);
+        $state = $this->form->getState();
+
+        foreach ($state as $key => $value) {
+            if (property_exists($s, $key)) {
+                $s->{$key} = $value;
+            }
+        }
+        $s->save();
+
+        AppConfig::put('shopify_markup_perc', (float) ($state['shopify_markup_perc'] ?? 0));
+
+        foreach (self::REGOLE as $chiave) {
+            if (! array_key_exists($chiave, $state)) {
+                continue;
+            }
+            $valore = $state[$chiave];
+            AppConfig::put($chiave, $chiave === 'metodi_pagamento' ? array_values((array) $valore) : (float) $valore);
+        }
+
+        Notification::make()->success()->title('Configurazioni salvate')->send();
+    }
+
+    public function testShopify(): void
+    {
+        $s = $this->form->getState();
+
+        try {
+            $resp = Http::withHeaders(['X-Shopify-Access-Token' => $s['shopify_access_token'] ?? ''])
+                ->acceptJson()
+                ->timeout(10)
+                ->get('https://'.($s['shopify_shop_domain'] ?? '').'/admin/api/2025-01/shop.json');
+
+            $resp->successful()
+                ? Notification::make()->success()->title('Shopify: connessione OK')->send()
+                : Notification::make()->danger()->title('Shopify: errore '.$resp->status())->send();
+        } catch (\Throwable $e) {
+            Notification::make()->danger()->title('Shopify: '.$e->getMessage())->send();
+        }
+    }
+
+    public function testErp(): void
+    {
+        // salva prima, così ErpManager legge i valori correnti
+        $this->salva();
+
+        try {
+            $driver = app(\App\Services\Erp\ErpManager::class)->driver();
+            $ok = $driver->test();
+            $ok
+                ? Notification::make()->success()->title('ERP: connessione OK')->send()
+                : Notification::make()->danger()->title('ERP: connessione fallita')->body($driver->lastError() ?: 'Verifica base URL, credenziali e raggiungibilità del server.')->send();
+        } catch (\Throwable $e) {
+            Notification::make()->danger()->title('ERP: '.$e->getMessage())->send();
+        }
+    }
+
+    /** Importa/aggiorna prodotti, varianti, prezzi e giacenze da WinMino (solo le selezioni configurate). */
+    public function importaDaWinmino(): void
+    {
+        Artisan::queue('sync:prodotti');
+        Notification::make()->success()->title('Importazione da WinMino in coda')
+            ->body('Prodotti, prezzi e giacenze delle linee/stagioni configurate. Richiede qualche minuto.')
+            ->send();
+    }
+
+    /** Invia a Shopify le sole giacenze dei prodotti già presenti sul portale (non importa nulla da WinMino). */
+    public function inviaGiacenzeShopify(): void
+    {
+        Artisan::queue('sync:giacenze');
+        Notification::make()->success()->title('Invio giacenze a Shopify in coda')->send();
+    }
+
+    /** Invia a Shopify anagrafica completa: nome, prezzo (con ricarico B2C), varianti, immagini, giacenze. */
+    public function inviaCatalogoCompletoShopify(): void
+    {
+        Artisan::queue('sync:giacenze', ['--full' => true]);
+        Notification::make()->success()->title('Invio catalogo completo a Shopify in coda')
+            ->body('Prezzo con ricarico, immagini e giacenze per tutti i prodotti attivi. Può richiedere diversi minuti.')
+            ->send();
+    }
+
+    public function sincronizzaClienti(): void
+    {
+        Artisan::queue('sync:clienti');
+        Notification::make()->success()->title('Sincronizzazione clienti in coda')->send();
+    }
+}
