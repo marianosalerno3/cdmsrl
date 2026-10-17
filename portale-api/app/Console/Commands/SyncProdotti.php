@@ -8,7 +8,9 @@ use App\Models\Colore;
 use App\Models\Prodotto;
 use App\Models\Stagione;
 use App\Models\Taglia;
+use App\Jobs\SyncProdottoEcommerce;
 use App\Models\VarianteProdotto;
+use App\Services\Channels\ChannelManager;
 use App\Services\Erp\ErpManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +35,7 @@ use Illuminate\Support\Facades\DB;
 class SyncProdotti extends Command
 {
     protected $signature = 'sync:prodotti
-        {--push : dopo l\'import accoda il push dei prodotti verso i canali e-commerce}
+        {--push : dopo l\'import accoda verso i canali e-commerce solo ciò che è cambiato (giacenze; prodotto completo se nuovo o con dati/prezzi cambiati)}
         {--dry-run : legge da WinMino e mostra cosa importerebbe, senza scrivere nel DB}
         {--limit= : limita a N articoli (per prove)}';
 
@@ -115,6 +117,8 @@ class SyncProdotti extends Command
         // 4. import per articolo: varianti (barcode) + giacenze
         $stat = ['prodotti' => 0, 'varianti' => 0, 'errori' => 0, 'senza_varianti' => 0, 'pezzi' => 0];
         $depositiVisti = [];
+        $cambiGiacenza = [];   // id prodotto → true: è cambiata la giacenza di almeno una variante
+        $cambiAnagrafica = []; // id prodotto → true: prodotto nuovo o con dati/prezzi cambiati
         $bar = $this->output->createProgressBar(count($conPrezzo));
         $bar->start();
 
@@ -125,7 +129,7 @@ class SyncProdotti extends Command
                 $varianti = $driver->getBarcodeTaglieColori($codice);
                 $giacenze = $this->giacenze($driver->getGiacenze($codice), $depositi, $depositiVisti);
 
-                DB::transaction(function () use ($a, $codice, $varianti, $giacenze, $stagioni, $gruppi, $pacchetti, $coloriWm, &$stat) {
+                DB::transaction(function () use ($a, $codice, $varianti, $giacenze, $stagioni, $gruppi, $pacchetti, $coloriWm, &$stat, &$cambiGiacenza, &$cambiAnagrafica) {
                     $prodotto = Prodotto::updateOrCreate(['codice' => $codice], [
                         'nome' => $a['DESCRIZIONE'] ?? $codice,
                         'descrizione' => $a['DESCRIZIONEWEB'] ?? null,
@@ -140,6 +144,10 @@ class SyncProdotti extends Command
                         // 'attivo' NON toccato: è il flag "pubblica sul portale" gestito dal pannello
                     ]);
 
+                    if ($prodotto->wasRecentlyCreated || $prodotto->wasChanged()) {
+                        $cambiAnagrafica[$prodotto->id] = true;
+                    }
+
                     if ($varianti === []) {
                         $stat['senza_varianti']++;
                     }
@@ -150,14 +158,27 @@ class SyncProdotti extends Command
                         $sku = (string) ($v['BARCODE'] ?? '') ?: "{$codice}|{$codColore}|{$taglia}";
                         $qta = $giacenze[$codColore.'|'.$taglia] ?? 0;   // assente = 0 (WinMino non restituisce l'esaurito)
 
-                        VarianteProdotto::withoutEvents(fn () => VarianteProdotto::updateOrCreate(['sku' => $sku], [
+                        $variante = VarianteProdotto::firstOrNew(['sku' => $sku]);
+                        $variante->fill([
                             'prodotto_id' => $prodotto->id,
                             'colore_id' => $this->coloreId($codColore, $coloriWm),
                             'taglia_id' => $this->tagliaId($taglia),
                             'prezzo' => $a['_PREZZO'],
                             'quantita' => $qta,
                             'barcode' => $v['BARCODE'] ?? null,
-                        ]));
+                        ]);
+
+                        if (! $variante->exists) {
+                            $cambiAnagrafica[$prodotto->id] = true;
+                        } else {
+                            if ($variante->isDirty('quantita')) {
+                                $cambiGiacenza[$prodotto->id] = true;
+                            }
+                            if ($variante->isDirty(['prezzo', 'colore_id', 'taglia_id'])) {
+                                $cambiAnagrafica[$prodotto->id] = true;
+                            }
+                        }
+                        VarianteProdotto::withoutEvents(fn () => $variante->save());
 
                         $stat['varianti']++;
                         $stat['pezzi'] += $qta;
@@ -187,13 +208,51 @@ class SyncProdotti extends Command
         }
 
         if ($this->option('push')) {
-            $this->call('sync:giacenze', ['--full' => true]);
+            $this->accodaPush($cambiGiacenza, $cambiAnagrafica);
         }
 
         return $stat['errori'] > 0 && $stat['prodotti'] === 0 ? self::FAILURE : self::SUCCESS;
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /**
+     * Verso gli e-commerce va solo ciò che è cambiato in questo import:
+     *  - prodotto nuovo, o con dati/prezzi/varianti cambiati → push completo
+     *  - solo la giacenza cambiata → push delle sole giacenze (molto più leggero)
+     *  - prodotto attivo mai inviato (senza id su Shopify) → push completo
+     * Il resto resta com'è: la rete di sicurezza notturna (sync:giacenze) riallinea comunque le giacenze.
+     *
+     * @param  array<string,bool>  $cambiGiacenza
+     * @param  array<string,bool>  $cambiAnagrafica
+     */
+    private function accodaPush(array $cambiGiacenza, array $cambiAnagrafica): void
+    {
+        if (app(ChannelManager::class)->enabled()->isEmpty()) {
+            $this->warn('Nessun canale e-commerce abilitato: nessun push accodato.');
+
+            return;
+        }
+
+        $mai = Prodotto::where('attivo', true)->whereNull('shopify_product_id')->pluck('id')->flip()->all();
+        $completi = array_keys($cambiAnagrafica + $mai);
+        $soloGiacenze = array_diff(array_keys($cambiGiacenza), $completi);
+
+        $attivi = fn (array $ids) => Prodotto::where('attivo', true)->whereIn('id', $ids)->pluck('id');
+
+        $nCompleti = 0;
+        foreach ($attivi($completi) as $id) {
+            SyncProdottoEcommerce::dispatch($id, null, 'full');
+            $nCompleti++;
+        }
+        $nGiacenze = 0;
+        foreach ($attivi($soloGiacenze) as $id) {
+            SyncProdottoEcommerce::dispatch($id, null, 'inventory');
+            $nGiacenze++;
+        }
+
+        $this->info("Push accodato: {$nCompleti} prodotti completi (nuovi o modificati), {$nGiacenze} solo giacenze.");
+    }
 
     /** @return list<array{0:string,1:string,2:string}> [linea, stagione, listino] */
     private function selezioni(string $listinoDefault): array
