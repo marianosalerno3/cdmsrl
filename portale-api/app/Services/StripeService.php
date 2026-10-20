@@ -68,6 +68,7 @@ class StripeService
                 'stripe_payment_intent' => $session->payment_intent,
                 'stato' => OrderStatus::ConfermatoCliente,
             ]);
+            app(ConfermaOrdineCliente::class)->invia($ordine);
 
             return true;
         }
@@ -86,11 +87,14 @@ class StripeService
         if ($event->type === 'checkout.session.completed') {
             $session = $event->data->object;
             $ordine = OrdineB2B::find($session->metadata->ordine_id ?? $session->client_reference_id);
-            $ordine?->update([
-                'pagato_at' => now(),
-                'stripe_payment_intent' => $session->payment_intent,
-                'stato' => OrderStatus::ConfermatoCliente,
-            ]);
+            if ($ordine) {
+                $ordine->update([
+                    'pagato_at' => now(),
+                    'stripe_payment_intent' => $session->payment_intent,
+                    'stato' => OrderStatus::ConfermatoCliente,
+                ]);
+                app(ConfermaOrdineCliente::class)->invia($ordine);
+            }
         }
     }
 }

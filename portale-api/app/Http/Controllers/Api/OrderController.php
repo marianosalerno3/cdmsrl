@@ -10,6 +10,7 @@ use App\Mail\NuovoOrdineBackofficeMail;
 use App\Models\Cliente;
 use App\Models\OrdineB2B;
 use App\Models\VarianteProdotto;
+use App\Services\ConfermaOrdineCliente;
 use App\Services\PriceService;
 use App\Services\StripeService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -105,6 +106,11 @@ class OrderController extends Controller
         // notifica il backoffice CDM (il commerciale carica l'ordine su WinMino)
         if ($destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))))) {
             Mail::to($destinatari)->queue(new NuovoOrdineBackofficeMail($ordine));
+        }
+
+        // conferma al cliente subito; con la carta solo quando il pagamento è incassato (vedi StripeService)
+        if ($ordine->metodo_pagamento !== PaymentMethod::Stripe) {
+            app(ConfermaOrdineCliente::class)->invia($ordine);
         }
 
         return response()->json([

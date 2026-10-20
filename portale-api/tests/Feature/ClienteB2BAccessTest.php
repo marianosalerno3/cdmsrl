@@ -13,6 +13,8 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use App\Mail\NuovaRegistrazioneB2BMail;
+use App\Mail\OrdineConfermaMail;
+use App\Services\ConfermaOrdineCliente;
 use App\Models\Agente;
 use App\Models\Cliente;
 use App\Models\OrdineB2B;
@@ -442,5 +444,46 @@ class ClienteB2BAccessTest extends TestCase
             ->assertForbidden();
 
         $this->withToken($token)->getJson('/api/agent/customers')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_la_conferma_ordine_parte_in_automatico_e_una_sola_volta(): void
+    {
+        Mail::fake();
+        $cliente = $this->cliente(['email' => 'conferma@example.test', 'agente_id' => null]);
+        $v = $this->variante();
+
+        $res = $this->actingAs($cliente, 'sanctum')->postJson('/api/orders', [
+            'metodo_pagamento' => 'bonifico',
+            'righe' => [['variante_id' => $v->id, 'quantita' => 1]],
+        ])->assertCreated();
+
+        $ordine = OrdineB2B::findOrFail($res->json('data.id'));
+        Mail::assertQueued(OrdineConfermaMail::class, fn ($m) => $m->hasTo('conferma@example.test'));
+        $this->assertNotNull($ordine->email_conferma_inviata_at);
+
+        // una seconda richiesta (es. webhook + ritorno dal pagamento) non duplica la mail
+        $this->assertFalse(app(ConfermaOrdineCliente::class)->invia($ordine->fresh()));
+        Mail::assertQueuedCount(2); // backoffice (se configurato) + cliente: la conferma resta una
+        Mail::assertQueued(OrdineConfermaMail::class, 1);
+    }
+
+    public function test_con_la_carta_la_conferma_parte_solo_a_pagamento_incassato(): void
+    {
+        Mail::fake();
+        $cliente = $this->cliente(['email' => 'carta@example.test', 'agente_id' => null]);
+        $v = $this->variante();
+
+        $res = $this->actingAs($cliente, 'sanctum')->postJson('/api/orders', [
+            'metodo_pagamento' => 'stripe',
+            'righe' => [['variante_id' => $v->id, 'quantita' => 1]],
+        ])->assertCreated();
+
+        $ordine = OrdineB2B::findOrFail($res->json('data.id'));
+        Mail::assertNotQueued(OrdineConfermaMail::class);
+        $this->assertNull($ordine->email_conferma_inviata_at);
+
+        // pagamento incassato: StripeService chiama questo metodo
+        $this->assertTrue(app(ConfermaOrdineCliente::class)->invia($ordine));
+        Mail::assertQueued(OrdineConfermaMail::class, fn ($m) => $m->hasTo('carta@example.test'));
     }
 }
