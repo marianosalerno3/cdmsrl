@@ -144,6 +144,54 @@ class ShopifyGraphqlTest extends TestCase
         Http::assertNothingSent();
     }
 
+    /** Prodotto con le taglie create in ordine sparso, come arrivano da WinMino. */
+    private function prodottoConTaglieSparse(?string $shopifyId = null): Prodotto
+    {
+        $p = Prodotto::create(['codice' => 'S'.random_int(1000, 9999), 'nome' => 'Maglia', 'prezzo_base' => 20, 'attivo' => true, 'shopify_product_id' => $shopifyId]);
+        $colore = Colore::firstOrCreate(['nome' => 'BLU'], ['codice' => 'BLU']);
+        foreach ([52, 54, 56, 60, 58, 42, 44, 46, 48, 50] as $n) {
+            $taglia = Taglia::firstOrCreate(['nome' => (string) $n], ['codice' => (string) $n, 'ordine' => $n]);
+            VarianteProdotto::create(['prodotto_id' => $p->id, 'taglia_id' => $taglia->id, 'colore_id' => $colore->id, 'sku' => "{$p->codice}-{$n}", 'prezzo' => 20, 'quantita' => 1]);
+        }
+
+        return $p->fresh();
+    }
+
+    public function test_le_taglie_vanno_a_shopify_in_ordine_da_42_a_60(): void
+    {
+        Http::fake(['*/products.json' => Http::response(['product' => ['id' => 55, 'variants' => []]])]);
+
+        $this->assertTrue($this->canale()->pushProduct($this->prodottoConTaglieSparse())->success);
+
+        Http::assertSent(function (Request $r) {
+            $taglie = collect($r['product']['variants'])->pluck('option1')->unique()->values()->all();
+
+            return $taglie === ['42', '44', '46', '48', '50', '52', '54', '56', '58', '60'];
+        });
+    }
+
+    public function test_riordina_le_taglie_di_un_prodotto_gia_su_shopify(): void
+    {
+        Http::fake(['*/graphql.json' => Http::response(['data' => ['productOptionsReorder' => ['userErrors' => []]]])]);
+
+        $res = $this->canale()->riordinaTaglie($this->prodottoConTaglieSparse('777'));
+
+        $this->assertTrue($res->success, $res->message);
+        Http::assertSent(function (Request $r) {
+            $opzioni = $r['variables']['options'];
+
+            return $r['variables']['id'] === 'gid://shopify/Product/777'
+                && $opzioni[0]['name'] === 'Taglia'
+                && array_column($opzioni[0]['values'], 'name') === ['42', '44', '46', '48', '50', '52', '54', '56', '58', '60']
+                && $opzioni[1] === ['name' => 'Colore'];
+        });
+
+        // un prodotto mai inviato non viene toccato
+        Http::fake();
+        $this->assertTrue($this->canale()->riordinaTaglie($this->prodottoConTaglieSparse())->success);
+        Http::assertNothingSent();
+    }
+
     public function test_fino_a_100_varianti_resta_sul_rest(): void
     {
         $p = $this->prodotto(10, 10); // 100 varianti: limite incluso

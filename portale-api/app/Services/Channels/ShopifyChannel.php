@@ -176,7 +176,7 @@ class ShopifyChannel implements EcommerceChannel
             'tags' => collect([$p->linea?->value ? "Linea: {$p->linea->value}" : null, $p->stagione?->codice, $p->genere?->nome])->filter()->implode(', '),
             'status' => $p->attivo ? 'active' : 'draft',
             'options' => [['name' => 'Taglia'], ['name' => 'Colore']],
-            'variants' => $p->varianti->map(fn (VarianteProdotto $v) => [
+            'variants' => $this->variantiOrdinate($p)->map(fn (VarianteProdotto $v) => [
                 'option1' => $v->taglia?->nome ?: 'UNICA',
                 'option2' => $v->colore?->nome ?: 'UNICO',
                 'sku' => $v->sku,
@@ -188,6 +188,55 @@ class ShopifyChannel implements EcommerceChannel
         ];
     }
 
+    /**
+     * Varianti in ordine di taglia (42, 44, … 60; poi XS…XXL; poi taglia unica) e, a parità, di colore:
+     * Shopify mostra i valori dell'opzione nell'ordine in cui compaiono, e WinMino non li dà ordinati.
+     *
+     * @return \Illuminate\Support\Collection<int,VarianteProdotto>
+     */
+    private function variantiOrdinate(Prodotto $p): \Illuminate\Support\Collection
+    {
+        return $p->varianti
+            ->sort(fn (VarianteProdotto $a, VarianteProdotto $b) => [$a->taglia?->ordine ?? 2000, (string) $a->colore?->nome]
+                <=> [$b->taglia?->ordine ?? 2000, (string) $b->colore?->nome])
+            ->values();
+    }
+
+    /**
+     * Rimette in ordine (42 → 60) le taglie di un prodotto già presente su Shopify, senza toccare altro.
+     */
+    public function riordinaTaglie(Prodotto $prodotto): ChannelResult
+    {
+        if (blank($prodotto->shopify_product_id)) {
+            return ChannelResult::ok('Prodotto non ancora inviato a Shopify: niente da riordinare');
+        }
+
+        $prodotto->loadMissing('varianti.taglia', 'varianti.colore');
+        $taglie = $this->variantiOrdinate($prodotto)
+            ->map(fn (VarianteProdotto $v) => $v->taglia?->nome ?: 'UNICA')->unique()->values()
+            ->map(fn (string $nome) => ['name' => $nome])->all();
+
+        $mutation = 'mutation($id: ID!, $options: [OptionReorderInput!]!) {
+            productOptionsReorder(productId: $id, options: $options) { userErrors { field message code } }
+        }';
+        $response = $this->http()->post("{$this->base}/graphql.json", [
+            'query' => $mutation,
+            'variables' => [
+                'id' => "gid://shopify/Product/{$prodotto->shopify_product_id}",
+                'options' => [['name' => 'Taglia', 'values' => $taglie], ['name' => 'Colore']],
+            ],
+        ]);
+
+        if ($response->failed()) {
+            return ChannelResult::fail("Shopify GraphQL {$response->status()}: ".$response->body());
+        }
+        $errori = $response->json('errors') ?? $response->json('data.productOptionsReorder.userErrors');
+        if (! empty($errori)) {
+            return ChannelResult::fail('Shopify riordino taglie: '.json_encode($errori, JSON_UNESCAPED_UNICODE));
+        }
+
+        return ChannelResult::ok('Taglie riordinate su Shopify');
+    }
     /**
      * Invio via GraphQL `productSet` per i prodotti con più di 100 varianti (limite dell'API REST).
      * Crea o aggiorna prodotto, opzioni Taglia/Colore, varianti con prezzo e giacenza, immagini.
