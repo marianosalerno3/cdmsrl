@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AppConfigController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\FilterController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
@@ -37,6 +38,11 @@ Route::middleware(['auth:sanctum', 'utente.attivo'])->group(function () {
     Route::get('/agent/customers', [AgentController::class, 'customers']);
     Route::get('/agent/orders', [AgentController::class, 'orders']);
     Route::get('/agent/seasons', [AgentController::class, 'seasons']);
+
+    // Carrello salvato sul server (riprendibile da altri dispositivi, base del promemoria)
+    Route::get('/cart', [CartController::class, 'show']);
+    Route::put('/cart', [CartController::class, 'update']);
+    Route::delete('/cart', [CartController::class, 'destroy']);
 
     // Ordini
     Route::post('/orders', [OrderController::class, 'store']);

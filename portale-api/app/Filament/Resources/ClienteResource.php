@@ -77,6 +77,13 @@ class ClienteResource extends Resource
                         .' (versione '.($record->privacy_versione ?: '—').')'
                     : 'Nessun consenso registrato: cliente importato da ERP o inserito da un agente.'),
             ])->visibleOn('edit'),
+            Forms\Components\Section::make('Comunicazioni commerciali')->schema([
+                Forms\Components\Placeholder::make('comunicazioni')->label('')->content(fn (?Cliente $record): string => match (true) {
+                    $record?->consenso_comunicazioni_revocato_at !== null => 'Consenso revocato il '.$record->consenso_comunicazioni_revocato_at->format('d/m/Y H:i').': non riceve email commerciali.',
+                    $record?->consenso_comunicazioni_at !== null => 'Consenso dato il '.$record->consenso_comunicazioni_at->format('d/m/Y H:i').'.',
+                    default => 'Nessun consenso: non riceve email commerciali (clienti importati da ERP o registrati prima del consenso).',
+                }),
+            ])->visibleOn('edit'),
         ]);
     }
 
@@ -95,6 +102,8 @@ class ClienteResource extends Resource
                 Tables\Columns\IconColumn::make('attivo')->boolean(),
                 Tables\Columns\TextColumn::make('privacy_accettata_at')->label('Consenso privacy')
                     ->dateTime('d/m/Y H:i')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('comunicazioni')->label('Comunicazioni')->boolean()
+                    ->state(fn (Cliente $r) => $r->haConsensoComunicazioni())->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('accesso')->label('Accesso portale')->boolean()
                     ->state(fn (Cliente $r) => $r->puoAccedere())->toggleable(),
                 Tables\Columns\IconColumn::make('contrassegno_abilitato')->label('Contrassegno')->boolean()->toggleable(),

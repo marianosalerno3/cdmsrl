@@ -45,7 +45,12 @@ import { COMPANY_NAME } from '@/lib/brand'
           art. 6.1.f).
         </li>
       </ul>
-      <p>Non utilizziamo i tuoi dati per finalità di marketing senza un consenso separato.</p>
+      <p>
+        <strong>Comunicazioni commerciali e promemoria</strong> (per esempio un promemoria se lasci un carrello in
+        sospeso): le inviamo solo se hai dato il consenso in registrazione (art. 6.1.a). Puoi revocarlo in qualsiasi
+        momento dal link presente in ogni email; le email necessarie al servizio, come le conferme degli ordini,
+        continuano ad arrivare. Non utilizziamo i tuoi dati per altre finalità di marketing senza un consenso separato.
+      </p>
 
       <h2 class="pt-2 text-base font-bold text-ink">4. A chi comunichiamo i dati</h2>
       <p>

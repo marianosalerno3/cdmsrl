@@ -75,6 +75,7 @@ class ClienteB2BAccessTest extends TestCase
             'password_confirmation' => 'una-password-lunga',
             'pec' => 'nuova@pec.example.test',
             'accetto_privacy' => true,
+            'accetto_comunicazioni' => true,
             'indirizzo' => 'Via Milano 5', 'cap' => '20100', 'citta' => 'Milano', 'provincia' => 'MI',
         ];
     }

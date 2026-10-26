@@ -1,5 +1,6 @@
 import { reactive, computed } from 'vue'
 import { useConfig } from '@/stores/config'
+import { api } from '@/lib/api'
 
 /**
  * Riga carrello: { varianteId, prodottoId, codice, nome, taglia, colore, sku, prezzo, quantita, programmata }
@@ -22,6 +23,51 @@ function persist() {
   localStorage.setItem('cart_items', JSON.stringify(state.items))
   if (state.draftId) localStorage.setItem('cart_draft_id', state.draftId)
   else localStorage.removeItem('cart_draft_id')
+}
+
+/**
+ * Copia del carrello sul server (uno per cliente): serve a riprenderlo da un altro dispositivo
+ * e al promemoria per i carrelli fermi. Si salva poco dopo ogni modifica; l'ordine la cancella lato server.
+ * Il cliente e le righe si fissano quando si pianifica il salvataggio, così un cambio di cliente subito dopo
+ * non scrive il carrello sbagliato.
+ */
+let syncTimer = null
+function syncServer() {
+  const clienteId = localStorage.getItem('selectedCustomerId')
+  if (!clienteId || !localStorage.getItem('token')) return
+  const items = state.items.map((i) => ({
+    varianteId: String(i.varianteId),
+    prodottoId: i.prodottoId != null ? String(i.prodottoId) : null,
+    codice: i.codice ?? null,
+    nome: i.nome ?? null,
+    taglia: i.taglia != null ? String(i.taglia) : null,
+    colore: i.colore ?? null,
+    sku: i.sku ?? null,
+    prezzo: Number(i.prezzo) || 0,
+    quantita: Number(i.quantita) || 1,
+    programmata: !!i.programmata,
+  }))
+  clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    api.put('/cart', { cliente_id: clienteId, items }).catch(() => {
+      /* non bloccante: il carrello resta comunque nel browser */
+    })
+  }, 1500)
+}
+
+/** Se il carrello locale è vuoto, riprende quello salvato sul server per il cliente indicato. */
+async function restoreFromServer(clienteId) {
+  if (!clienteId || state.items.length) return
+  try {
+    const { data } = await api.get('/cart', { params: { cliente_id: clienteId } })
+    const items = data?.data?.items ?? []
+    if (items.length && !state.items.length) {
+      state.items = items
+      persist()
+    }
+  } catch {
+    /* nessun carrello salvato o rete assente */
+  }
 }
 
 export function useCart() {
@@ -56,6 +102,7 @@ export function useCart() {
     if (existing) existing.quantita += line.quantita
     else state.items.push({ ...line })
     persist()
+    syncServer()
   }
 
   /** aggiunge/aggiorna in blocco le righe di un prodotto (dalla matrice taglie/colori) */
@@ -70,12 +117,14 @@ export function useCart() {
     else {
       i.quantita = quantita
       persist()
+      syncServer()
     }
   }
 
   function removeLine(varianteId) {
     state.items = state.items.filter((i) => i.varianteId !== varianteId)
     persist()
+    syncServer()
   }
 
   function clear() {
@@ -111,6 +160,7 @@ export function useCart() {
     setQuantity,
     removeLine,
     clear,
+    restoreFromServer,
     toOrderPayload,
   }
 }

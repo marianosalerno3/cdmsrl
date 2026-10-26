@@ -19,6 +19,7 @@ const form = ref({
   agente_codice: '',
 })
 const accettoPrivacy = ref(false)
+const accettoComunicazioni = ref(false)
 const documenti = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -38,11 +39,16 @@ async function submit() {
     error.value = 'Per registrarti devi accettare l’informativa privacy e le condizioni d’uso.'
     return
   }
+  if (!accettoComunicazioni.value) {
+    error.value = 'Per registrarti devi acconsentire alle comunicazioni commerciali (puoi annullare l’iscrizione in qualsiasi momento).'
+    return
+  }
   loading.value = true
   try {
     const fd = new FormData()
     Object.entries(form.value).forEach(([k, v]) => v && fd.append(k, v))
     fd.append('accetto_privacy', '1')
+    fd.append('accetto_comunicazioni', '1')
     documenti.value.forEach((f) => fd.append('documenti[]', f))
     await api.post('/register-b2b', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     done.value = true
@@ -169,6 +175,14 @@ async function submit() {
             >
             e le <RouterLink to="/condizioni" target="_blank" class="font-semibold underline">condizioni d’uso del
             portale</RouterLink>. <span class="text-zinc-500">*</span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-3 rounded-lg bg-zinc-50 px-3 py-3 text-sm sm:col-span-2">
+          <input v-model="accettoComunicazioni" type="checkbox" required class="mt-0.5 size-4 shrink-0 accent-black" />
+          <span>
+            Acconsento a ricevere comunicazioni commerciali e promemoria (per esempio sui carrelli lasciati in sospeso) via email.
+            <span class="text-zinc-500">Posso annullare l’iscrizione in qualsiasi momento dal link in ogni email. *</span>
           </span>
         </label>
 

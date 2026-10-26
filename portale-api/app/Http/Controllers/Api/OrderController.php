@@ -7,6 +7,7 @@ use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Mail\NuovoOrdineBackofficeMail;
+use App\Models\Carrello;
 use App\Models\Cliente;
 use App\Models\OrdineB2B;
 use App\Models\VarianteProdotto;
@@ -102,6 +103,9 @@ class OrderController extends Controller
 
             return $ordine;
         });
+
+        // l'ordine è partito: il carrello salvato non serve più (e niente promemoria)
+        Carrello::where('cliente_id', $cliente->id)->delete();
 
         // notifica il backoffice CDM (il commerciale carica l'ordine su WinMino)
         if ($destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))))) {

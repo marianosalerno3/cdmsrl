@@ -13,7 +13,7 @@ import EmptyState from '@/components/EmptyState.vue'
 const route = useRoute()
 const router = useRouter()
 const cart = useCart()
-const { selected } = useCustomer()
+const { selected, load: loadCustomers, select: selectCustomer } = useCustomer()
 const { isCliente } = useAuth()
 const { config, paymentLabel } = useConfig()
 
@@ -82,6 +82,16 @@ onMounted(async () => {
   } else if (stripe === 'cancel') {
     error.value = 'Pagamento annullato.'
     router.replace({ name: 'cart' })
+  }
+
+  // link "riprendi il carrello" dalle email: ?cliente=<id> seleziona il cliente e rimette il carrello salvato
+  if (!stripe) {
+    if (route.query.cliente) {
+      await loadCustomers().catch(() => {})
+      selectCustomer(String(route.query.cliente))
+      router.replace({ name: 'cart' })
+    }
+    await cart.restoreFromServer(selected.value?.id ?? localStorage.getItem('selectedCustomerId'))
   }
 })
 </script>

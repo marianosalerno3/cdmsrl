@@ -31,7 +31,7 @@ class Cliente extends Authenticatable
     protected $fillable = [
         'agente_id', 'codice_cliente_erp', 'tipo',
         'ragione_sociale', 'nome', 'cognome', 'email', 'password', 'telefono',
-        'stato_richiesta', 'approvato_at', 'privacy_accettata_at', 'privacy_versione', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
+        'stato_richiesta', 'approvato_at', 'privacy_accettata_at', 'privacy_versione', 'consenso_comunicazioni_at', 'consenso_comunicazioni_revocato_at', 'partita_iva', 'codice_fiscale', 'codice_sdi', 'pec',
         'tipo_listino', 'attivo', 'contrassegno_abilitato',
         'indirizzo', 'cap', 'citta', 'provincia', 'nazione',
         'criterio_sconto', 'zona', 'nazione_erp', 'tipologia_fe', 'tipologia_codice_fe',
@@ -48,6 +48,8 @@ class Cliente extends Authenticatable
             'stato_richiesta' => RichiestaStato::class,
             'approvato_at' => 'datetime',
             'privacy_accettata_at' => 'datetime',
+            'consenso_comunicazioni_at' => 'datetime',
+            'consenso_comunicazioni_revocato_at' => 'datetime',
             'tipo_listino' => ListinoTipo::class,
             'attivo' => 'boolean',
             'contrassegno_abilitato' => 'boolean',
@@ -77,6 +79,12 @@ class Cliente extends Authenticatable
         return filled($this->password)
             && $this->attivo
             && $this->stato_richiesta === RichiestaStato::Approvato;
+    }
+
+    /** Ha dato il consenso alle comunicazioni commerciali e non lo ha poi revocato. */
+    public function haConsensoComunicazioni(): bool
+    {
+        return $this->consenso_comunicazioni_at !== null && $this->consenso_comunicazioni_revocato_at === null;
     }
 
     public function agente(): BelongsTo

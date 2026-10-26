@@ -41,6 +41,8 @@ class ConfigurazioniSistema extends Page implements HasForms
         'importo_minimo_ordine',
         'giorni_evasione_programmati',
         'metodi_pagamento',
+        'promemoria_carrello_attivo',
+        'promemoria_carrello_ore',
     ];
 
     public function mount(): void
@@ -61,6 +63,8 @@ class ConfigurazioniSistema extends Page implements HasForms
             'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
             // regole commerciali del portale B2B (valori correnti di AppConfig::payload())
             ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
+            'promemoria_carrello_attivo' => (bool) AppConfig::get('promemoria_carrello_attivo', true),
+            'promemoria_carrello_ore' => (int) AppConfig::get('promemoria_carrello_ore', 24),
         ]);
     }
 
@@ -104,6 +108,12 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('spedizione_pronto_perc')->label('Spedizione pronto — percentuale')
                             ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
                             ->helperText('% sul totale merce, oltre la soglia, arrotondata per eccesso all\'euro (15,75 € → 16 €). Gli ordini programmati non hanno spese a carrello.'),
+
+                        Toggle::make('promemoria_carrello_attivo')->label('Promemoria carrelli fermi')
+                            ->helperText('Email al cliente (solo se ha dato il consenso alle comunicazioni) o, se non è sul portale, all\'agente che ha caricato il carrello.'),
+                        TextInput::make('promemoria_carrello_ore')->label('Promemoria dopo')
+                            ->numeric()->minValue(1)->maxValue(168)->integer()->suffix('ore')->required()
+                            ->helperText('Ore senza modifiche al carrello prima del promemoria. Una sola volta per carrello.'),
 
                         CheckboxList::make('metodi_pagamento')->label('Metodi di pagamento offerti')
                             ->options([
@@ -166,7 +176,11 @@ class ConfigurazioniSistema extends Page implements HasForms
                 continue;
             }
             $valore = $state[$chiave];
-            AppConfig::put($chiave, $chiave === 'metodi_pagamento' ? array_values((array) $valore) : (float) $valore);
+            AppConfig::put($chiave, match ($chiave) {
+                'metodi_pagamento' => array_values((array) $valore),
+                'promemoria_carrello_attivo' => (bool) $valore,
+                default => (float) $valore,
+            });
         }
 
         Notification::make()->success()->title('Configurazioni salvate')->send();
