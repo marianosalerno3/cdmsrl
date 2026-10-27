@@ -192,6 +192,31 @@ class ShopifyGraphqlTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_il_prezzo_shopify_usa_il_moltiplicatore_della_linea(): void
+    {
+        \App\Models\AppConfig::put('shopify_markup_perc', 300);                       // generale: ×4
+        \App\Models\AppConfig::put('shopify_moltiplicatori_linea', ['CLARA G' => 2.8]); // Clara G.: ×2,8
+        Http::fake(['*/products.json' => Http::response(['product' => ['id' => 55, 'variants' => []]])]);
+
+        $clara = $this->prodottoConTaglieSparse();
+        $clara->update(['linea' => 'CLARA G']);
+        $this->assertTrue($this->canale()->pushProduct($clara->fresh())->success);
+
+        $classe = $this->prodottoConTaglieSparse();
+        $classe->update(['linea' => 'CLASSE DI VALENTINA']);
+        $this->assertTrue($this->canale()->pushProduct($classe->fresh())->success);
+
+        $prezzi = [];
+        Http::assertSent(function (Request $r) use (&$prezzi) {
+            $prezzi[] = $r['product']['variants'][0]['price'];
+
+            return true;
+        });
+
+        // listino base 20 € → Clara G. 56,00 (×2,8); Classe di Valentina 80,00 (×4, ricarico generale)
+        $this->assertSame(['56.00', '80.00'], $prezzi);
+    }
+
     public function test_fino_a_100_varianti_resta_sul_rest(): void
     {
         $p = $this->prodotto(10, 10); // 100 varianti: limite incluso

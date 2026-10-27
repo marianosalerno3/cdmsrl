@@ -45,6 +45,13 @@ class ConfigurazioniSistema extends Page implements HasForms
         'promemoria_carrello_ore',
     ];
 
+    /** Moltiplicatori B2C per linea: campo del form → linea (vuoto = vale il ricarico generale). */
+    private const MOLTIPLICATORI_LINEA = [
+        'shopify_molt_clara_g' => 'CLARA G',
+        'shopify_molt_classe' => 'CLASSE DI VALENTINA',
+        'shopify_molt_oltretempo' => 'OLTRETEMPO',
+    ];
+
     public function mount(): void
     {
         $s = app(IntegrationSettings::class);
@@ -61,6 +68,7 @@ class ConfigurazioniSistema extends Page implements HasForms
             'erp_password' => $s->erp_password,
             'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
             'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
+            ...collect(self::MOLTIPLICATORI_LINEA)->map(fn (string $linea) => ((array) AppConfig::get('shopify_moltiplicatori_linea', []))[$linea] ?? null)->all(),
             // regole commerciali del portale B2B (valori correnti di AppConfig::payload())
             ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
             'promemoria_carrello_attivo' => (bool) AppConfig::get('promemoria_carrello_attivo', true),
@@ -79,9 +87,18 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('shopify_shop_domain')->label('Shop Domain')
                             ->helperText('es. mio-shop.myshopify.com — senza https://'),
                         TextInput::make('shopify_access_token')->label('Access Token')->password()->revealable(),
+                        TextInput::make('shopify_molt_clara_g')->label('Clara G. — moltiplicatore')
+                            ->numeric()->minValue(0.1)->step(0.01)->prefix('×')
+                            ->helperText('Prezzo Shopify = listino base ingrosso × questo valore (es. 2,8). Vuoto = vale il ricarico generale qui sotto.'),
+                        TextInput::make('shopify_molt_classe')->label('Classe di Valentina — moltiplicatore')
+                            ->numeric()->minValue(0.1)->step(0.01)->prefix('×')
+                            ->helperText('Vuoto = vale il ricarico generale.'),
+                        TextInput::make('shopify_molt_oltretempo')->label('Oltretempo — moltiplicatore')
+                            ->numeric()->minValue(0.1)->step(0.01)->prefix('×')
+                            ->helperText('Vuoto = vale il ricarico generale.'),
                         TextInput::make('shopify_markup_perc')->label('Ricarico B2C (%)')
                             ->numeric()->default(0)->suffix('%')
-                            ->helperText('Applicato sopra il prezzo di listino B2B quando un prodotto viene inviato a Shopify. Es. 100 = prezzo raddoppiato, 0 = nessun ricarico.')
+                            ->helperText('Per le linee senza moltiplicatore. Es. 100 = prezzo ×2, 300 = ×4, 0 = nessun ricarico. Vale quando un prodotto viene inviato a Shopify.')
                             ->columnSpanFull(),
                     ]),
 
@@ -170,6 +187,11 @@ class ConfigurazioniSistema extends Page implements HasForms
         $s->save();
 
         AppConfig::put('shopify_markup_perc', (float) ($state['shopify_markup_perc'] ?? 0));
+        AppConfig::put('shopify_moltiplicatori_linea', collect(self::MOLTIPLICATORI_LINEA)
+            ->map(fn (string $linea, string $campo) => (float) ($state[$campo] ?? 0))
+            ->filter(fn (float $v) => $v > 0)
+            ->mapWithKeys(fn (float $v, string $campo) => [self::MOLTIPLICATORI_LINEA[$campo] => $v])
+            ->all());
 
         foreach (self::REGOLE as $chiave) {
             if (! array_key_exists($chiave, $state)) {

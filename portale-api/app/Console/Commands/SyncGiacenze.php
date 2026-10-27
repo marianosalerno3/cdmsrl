@@ -20,7 +20,8 @@ class SyncGiacenze extends Command
     protected $signature = 'sync:giacenze
         {--full : pubblica anagrafica completa invece delle sole giacenze}
         {--channel= : nome canale (default: tutti gli abilitati; oggi solo shopify)}
-        {--codice=* : limita a uno o più codici prodotto}';
+        {--codice=* : limita a uno o più codici prodotto}
+        {--linea= : limita a una linea (es. "CLARA G")}';
 
     protected $description = 'Push giacenze/prodotti verso i canali e-commerce';
 
@@ -39,6 +40,10 @@ class SyncGiacenze extends Command
         $query = Prodotto::query()->where('attivo', true);
         if ($codici = array_filter((array) $this->option('codice'))) {
             $query->whereIn('codice', $codici);
+        }
+
+        if ($linea = trim((string) $this->option('linea'))) {
+            $query->where('linea', $linea);
         }
 
         $n = 0;

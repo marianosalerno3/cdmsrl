@@ -162,11 +162,24 @@ class ShopifyChannel implements EcommerceChannel
 
     // ---------------------------------------------------------------------
 
+    /**
+     * Moltiplicatore del prezzo B2C rispetto al listino base dell'ingrosso (impostabile in Configurazioni Sistema).
+     * Ogni linea può avere il suo (es. Clara G. ×2,8); senza, vale il ricarico generale in % (300 = ×4, 0 = ×1).
+     */
+    public function moltiplicatore(Prodotto $p): float
+    {
+        $perLinea = (array) \App\Models\AppConfig::get('shopify_moltiplicatori_linea', []);
+        $linea = $perLinea[$p->linea?->value ?? ''] ?? null;
+        if (is_numeric($linea) && (float) $linea > 0) {
+            return (float) $linea;
+        }
+
+        return 1 + ((float) \App\Models\AppConfig::get('shopify_markup_perc', 0)) / 100;
+    }
+
     private function productPayload(Prodotto $p): array
     {
-        // Ricarico B2C sul prezzo di listino B2B (impostabile in Configurazioni Sistema).
-        // Es. 100 = raddoppia il prezzo; 0 = nessun ricarico, stesso prezzo degli agenti.
-        $markup = 1 + ((float) \App\Models\AppConfig::get('shopify_markup_perc', 0)) / 100;
+        $markup = $this->moltiplicatore($p);
 
         return [
             'title' => $p->nome,
