@@ -11,7 +11,15 @@ const emit = defineEmits(['add'])
 // quantità digitate: { [varianteId]: number }
 const qty = reactive({})
 
-const taglie = computed(() => uniq(props.variants.map((v) => v.taglia).filter(Boolean)))
+// taglie in ordine (42 → 60…): per ordine della taglia, non per come arrivano le varianti
+const taglie = computed(() =>
+  uniq(
+    [...props.variants]
+      .filter((v) => v.taglia)
+      .sort((a, b) => (a.taglia_ordine ?? 2000) - (b.taglia_ordine ?? 2000))
+      .map((v) => v.taglia),
+  ),
+)
 const colori = computed(() => uniq(props.variants.map((v) => v.colore).filter(Boolean)))
 
 function uniq(arr) {
@@ -36,8 +44,13 @@ const totaleImporto = computed(() =>
   }, 0),
 )
 
+// sul pronto non si ordina più della giacenza; sulle stagioni programmate si ordina anche senza giacenza
+function maxFor(v) {
+  return props.product.programmata ? 9999 : v.quantita
+}
+
 function clampInput(v, max) {
-  const n = Math.max(0, Math.min(Number(v) || 0, max))
+  const n = Math.max(0, Math.min(Math.floor(Number(v)) || 0, max))
   return n
 }
 
@@ -77,15 +90,17 @@ function aggiungi() {
             <td class="p-3 font-medium">{{ c }}</td>
             <td v-for="t in taglie" :key="t" class="p-2 text-center">
               <template v-if="variantOf(c, t)">
+                <span v-if="maxFor(variantOf(c, t)) <= 0" class="text-xs text-zinc-400">Esaurito</span>
                 <input
+                  v-else
                   type="number"
                   min="0"
-                  :max="variantOf(c, t).quantita"
+                  :max="maxFor(variantOf(c, t))"
                   class="field !w-16 !px-2 !py-1.5 text-center"
                   :value="qty[variantOf(c, t).id] || ''"
-                  :placeholder="String(variantOf(c, t).quantita)"
+                  :placeholder="product.programmata ? '' : String(variantOf(c, t).quantita)"
                   @input="
-                    qty[variantOf(c, t).id] = clampInput($event.target.value, variantOf(c, t).quantita)
+                    qty[variantOf(c, t).id] = clampInput($event.target.value, maxFor(variantOf(c, t)))
                   "
                 />
               </template>
