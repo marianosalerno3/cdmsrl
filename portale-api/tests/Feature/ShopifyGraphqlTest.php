@@ -70,6 +70,7 @@ class ShopifyGraphqlTest extends TestCase
 
     public function test_oltre_100_varianti_usa_graphql_product_set(): void
     {
+        \App\Models\AppConfig::put('shopify_arrotondamento_centesimi', null); // il test controlla il prezzo "pulito"
         $p = $this->prodotto(12, 10); // 120 varianti
         Http::fake([
             '*/graphql.json' => Http::response($this->rispostaProductSet($p, '777')),
@@ -195,6 +196,7 @@ class ShopifyGraphqlTest extends TestCase
     public function test_il_prezzo_shopify_usa_il_moltiplicatore_della_linea(): void
     {
         \App\Models\AppConfig::put('shopify_markup_perc', 300);                       // generale: ×4
+        \App\Models\AppConfig::put('shopify_arrotondamento_centesimi', null);
         \App\Models\AppConfig::put('shopify_moltiplicatori_linea', ['CLARA G' => 2.8]); // Clara G.: ×2,8
         Http::fake(['*/products.json' => Http::response(['product' => ['id' => 55, 'variants' => []]])]);
 
@@ -215,6 +217,23 @@ class ShopifyGraphqlTest extends TestCase
 
         // listino base 20 € → Clara G. 56,00 (×2,8); Classe di Valentina 80,00 (×4, ricarico generale)
         $this->assertSame(['56.00', '80.00'], $prezzi);
+    }
+
+    public function test_il_prezzo_shopify_si_arrotonda_ai_centesimi_impostati(): void
+    {
+        $canale = $this->canale();
+
+        \App\Models\AppConfig::put('shopify_arrotondamento_centesimi', 90);
+        $this->assertSame(36.90, $canale->arrotondaPrezzo(36.12));
+        $this->assertSame(36.90, $canale->arrotondaPrezzo(36.90)); // già a posto: resta
+        $this->assertSame(37.90, $canale->arrotondaPrezzo(36.91)); // mai verso il basso
+        $this->assertSame(0.90, $canale->arrotondaPrezzo(0.5));
+
+        \App\Models\AppConfig::put('shopify_arrotondamento_centesimi', 0);
+        $this->assertSame(37.00, $canale->arrotondaPrezzo(36.12));
+
+        \App\Models\AppConfig::put('shopify_arrotondamento_centesimi', null);
+        $this->assertSame(36.12, $canale->arrotondaPrezzo(36.12));
     }
 
     public function test_fino_a_100_varianti_resta_sul_rest(): void

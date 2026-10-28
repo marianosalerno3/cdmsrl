@@ -177,6 +177,26 @@ class ShopifyChannel implements EcommerceChannel
         return 1 + ((float) \App\Models\AppConfig::get('shopify_markup_perc', 0)) / 100;
     }
 
+    /**
+     * Arrotondamento "psicologico" del prezzo B2C: il prezzo sale al primo valore che finisce con i centesimi
+     * impostati in Configurazioni Sistema (es. 90: 36,12 → 36,90; 36,91 → 37,90). Vuoto = nessun arrotondamento.
+     */
+    public function arrotondaPrezzo(float $prezzo): float
+    {
+        $fine = \App\Models\AppConfig::get('shopify_arrotondamento_centesimi');
+        if (! is_numeric($fine) || (int) $fine < 0 || (int) $fine > 99) {
+            return $prezzo;
+        }
+
+        $centesimi = (int) round($prezzo * 100);
+        $candidato = intdiv($centesimi, 100) * 100 + (int) $fine;
+        if ($candidato < $centesimi) {
+            $candidato += 100;
+        }
+
+        return $candidato / 100;
+    }
+
     private function productPayload(Prodotto $p): array
     {
         $markup = $this->moltiplicatore($p);
@@ -193,7 +213,7 @@ class ShopifyChannel implements EcommerceChannel
                 'option1' => $v->taglia?->nome ?: 'UNICA',
                 'option2' => $v->colore?->nome ?: 'UNICO',
                 'sku' => $v->sku,
-                'price' => number_format(round(((float) $v->prezzo) * $markup, 2), 2, '.', ''),
+                'price' => number_format($this->arrotondaPrezzo(round(((float) $v->prezzo) * $markup, 2)), 2, '.', ''),
                 'inventory_management' => 'shopify',
                 'inventory_quantity' => (int) $v->quantita,
             ])->values()->all(),

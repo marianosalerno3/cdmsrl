@@ -68,6 +68,7 @@ class ConfigurazioniSistema extends Page implements HasForms
             'erp_password' => $s->erp_password,
             'sync_giacenze_automatica' => $s->sync_giacenze_automatica,
             'shopify_markup_perc' => AppConfig::get('shopify_markup_perc', 0),
+            'shopify_arrotondamento_centesimi' => AppConfig::get('shopify_arrotondamento_centesimi'),
             ...collect(self::MOLTIPLICATORI_LINEA)->map(fn (string $linea) => ((array) AppConfig::get('shopify_moltiplicatori_linea', []))[$linea] ?? null)->all(),
             // regole commerciali del portale B2B (valori correnti di AppConfig::payload())
             ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
@@ -96,6 +97,9 @@ class ConfigurazioniSistema extends Page implements HasForms
                         TextInput::make('shopify_molt_oltretempo')->label('Oltretempo — moltiplicatore')
                             ->numeric()->minValue(0.1)->step(0.01)->prefix('×')
                             ->helperText('Vuoto = vale il ricarico generale.'),
+                        TextInput::make('shopify_arrotondamento_centesimi')->label('Arrotondamento prezzi Shopify')
+                            ->numeric()->integer()->minValue(0)->maxValue(99)->suffix('centesimi finali')
+                            ->helperText('Es. 90: il prezzo sale al primo valore che finisce con ,90 (36,12 → 36,90). Vuoto = nessun arrotondamento. Vale per tutte le linee.'),
                         TextInput::make('shopify_markup_perc')->label('Ricarico B2C (%)')
                             ->numeric()->default(0)->suffix('%')
                             ->helperText('Per le linee senza moltiplicatore. Es. 100 = prezzo ×2, 300 = ×4, 0 = nessun ricarico. Vale quando un prodotto viene inviato a Shopify.')
@@ -187,6 +191,8 @@ class ConfigurazioniSistema extends Page implements HasForms
         $s->save();
 
         AppConfig::put('shopify_markup_perc', (float) ($state['shopify_markup_perc'] ?? 0));
+        $arrotondamento = $state['shopify_arrotondamento_centesimi'] ?? null;
+        AppConfig::put('shopify_arrotondamento_centesimi', is_numeric($arrotondamento) ? (int) $arrotondamento : null);
         AppConfig::put('shopify_moltiplicatori_linea', collect(self::MOLTIPLICATORI_LINEA)
             ->map(fn (string $linea, string $campo) => (float) ($state[$campo] ?? 0))
             ->filter(fn (float $v) => $v > 0)
