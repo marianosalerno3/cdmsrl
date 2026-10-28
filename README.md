@@ -39,9 +39,9 @@ Replica 1:1 dello stack di riferimento `valentinario.peels.it`.
 ## Stato
 
 - [x] **Backend — fondamenta**: schema DB, model, enum, API SPA (auth Sanctum,
-      catalogo, ordini, PDF, Stripe, sostituzioni), pannello Filament base, seeder
+      catalogo, ordini, PDF, Stripe), pannello Filament base, seeder
 - [x] **Backend — pannello Filament**: risorse (anagrafiche, attributi, Prodotto
-      read-first, Ordini B2B, Sostituzioni), Configurazioni Sistema, Dashboard
+      read-first, Ordini B2B), Configurazioni Sistema, Dashboard
       con widget, upload massivo immagini
 - [x] **Integrazioni**: import WinMino (`sync:prodotti` / `sync:clienti`, GET via
       decoder `meta`), push Shopify (`ChannelManager` / `ShopifyChannel`), notifica

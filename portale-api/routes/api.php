@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\FilterController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\RegisterB2BController;
-use App\Http\Controllers\Api\ReturnController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,11 +55,7 @@ Route::middleware(['auth:sanctum', 'utente.attivo'])->group(function () {
 
 // -------- Solo agenti --------
 Route::middleware(['auth:sanctum', 'agente.attivo'])->group(function () {
-    Route::get('/agent/returns', [AgentController::class, 'returns']);
     Route::post('/clients', [AgentController::class, 'storeClientRequest']);
-
-    // Sostituzioni / resi
-    Route::post('/returns', [ReturnController::class, 'store']);
 });
 
 // Webhook Stripe (fuori auth, verificato via signature)

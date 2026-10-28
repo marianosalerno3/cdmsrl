@@ -45,7 +45,7 @@ src/
   router/     8 rotte + guardia auth
   stores/     auth · customer · cart · config
   components/ AppNav · ProductCard · CustomerSelect · SizeColorMatrix · Spinner · EmptyState
-  views/      Login · RegisterB2B · Dashboard · Catalog · ProductDetail · Cart · AgentNewClient · Sostituzioni
+  views/      Login · RegisterB2B · Dashboard · Catalog · ProductDetail · Cart · AgentNewClient
 ```
 
 ## Rotte
@@ -58,7 +58,6 @@ src/
 | `/product/:id` | dettaglio + matrice taglie/colori |
 | `/cart` | riepilogo, IVA, spedizione, pagamento, conferma (+ redirect Stripe) |
 | `/agent/new-client` | proposta nuovo cliente |
-| `/sostituzioni` | richieste di cambio taglia/colore |
 
 ## Note
 

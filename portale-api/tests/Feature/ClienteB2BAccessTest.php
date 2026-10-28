@@ -283,7 +283,6 @@ class ClienteB2BAccessTest extends TestCase
         $cliente = $this->cliente();
 
         $this->actingAs($cliente, 'sanctum')->postJson('/api/clients', [])->assertForbidden();
-        $this->actingAs($cliente, 'sanctum')->getJson('/api/agent/returns')->assertForbidden();
     }
 
     public function test_cliente_disattivato_perde_l_accesso_anche_con_token_valido(): void

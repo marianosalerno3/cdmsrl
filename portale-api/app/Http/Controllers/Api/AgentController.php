@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Enums\RichiestaStato;
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
-use App\Models\Sostituzione;
 use App\Models\Stagione;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,17 +70,6 @@ class AgentController extends Controller
                 ->orderByDesc('ordine')->orderBy('codice')
                 ->get(['codice', 'nome', 'programmata']),
         ]);
-    }
-
-    /** GET /api/agent/returns */
-    public function returns(Request $request): JsonResponse
-    {
-        $data = Sostituzione::where('agente_id', $request->user()->id)
-            ->with(['ordineOriginale:id,numero', 'righe'])
-            ->latest()
-            ->get();
-
-        return response()->json(['data' => $data]);
     }
 
     /** POST /api/clients — l'agente propone un nuovo cliente (stato "in attesa"). */

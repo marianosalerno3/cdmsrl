@@ -87,7 +87,6 @@ resources/views/pdf/     template PDF ordine
 | GET  | `/api/orders/{id}/pdf/v2` | blob PDF |
 | POST | `/api/orders/{id}/checkout-session` | Stripe Checkout |
 | POST | `/api/orders/{id}/verify-stripe-payment` | `{ session_id }` |
-| POST | `/api/returns` | richiesta sostituzione |
 | POST | `/api/stripe/webhook` | `checkout.session.completed` |
 
 ## Regole di business (`App\Services\PriceService`)
@@ -102,7 +101,7 @@ resources/views/pdf/     template PDF ordine
 | Gruppo | Risorse / pagine |
 |---|---|
 | Catalogo | Upload Massivo Immagini · Prodotti (read-first, WinMino master) · Dizionario Prodotti |
-| Vendite | Agenti · Clienti (+ approvazione, export CSV) · Sostituzioni (workflow stato) |
+| Vendite | Agenti · Clienti (+ approvazione, export CSV) |
 | Ordini | Ordini B2B (tab Tutti/B2B/Shopify, azioni Stato/PDF/Mail) |
 | Attributi Prodotto | Categorie · Colori · Generi · Taglie |
 | Configurazione | Stagioni |

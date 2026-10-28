@@ -12,14 +12,13 @@ const { count } = useCart()
 const { selected } = useCustomer()
 const open = ref(false)
 
-// il cliente B2B ordina da solo: niente sostituzioni né gestione clienti (funzioni dell'agente)
+// il cliente B2B ordina da solo: niente gestione clienti (funzioni dell'agente)
 const links = computed(() => [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/catalog', label: 'Catalogo' },
   ...(isCliente.value
     ? []
     : [
-        { to: '/sostituzioni', label: 'Sostituzioni' },
         { to: '/agent/new-client', label: 'Nuovo Cliente' },
       ]),
 ])
