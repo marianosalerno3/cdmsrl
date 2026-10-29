@@ -115,6 +115,7 @@ class ShopifyGraphqlTest extends TestCase
         $this->assertTrue($this->canale()->pushProduct($p)->success);
 
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/graphql.json')
+            && str_contains($r['query'], 'productSet')
             && $r['variables']['identifier'] === ['id' => 'gid://shopify/Product/777']
             && ! isset($r['variables']['input']['files']));
     }
@@ -143,6 +144,79 @@ class ShopifyGraphqlTest extends TestCase
 
         $this->assertTrue($res->success);
         Http::assertNothingSent();
+    }
+
+    public function test_le_giacenze_si_mandano_come_quantita_fisica_e_solo_se_cambiate(): void
+    {
+        $p = $this->prodotto(2, 1, '777'); // 2 varianti, già su Shopify, giacenza 2 ciascuna
+        [$uno, $due] = $p->varianti->sortBy('sku')->values()->all();
+        $uno->update(['quantita' => 5]);   // su Shopify c'è già 5: invariata
+        $due->update(['quantita' => 3]);   // su Shopify c'è 1: +2
+        $livelli = fn (VarianteProdotto $v, int $q) => [
+            'sku' => $v->sku,
+            'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/'.md5($v->sku), 'inventoryLevel' => ['quantities' => [['quantity' => $q]]]],
+        ];
+        Http::fake([
+            '*/locations.json' => Http::response(['locations' => [['id' => 42]]]),
+            '*/graphql.json' => function (Request $r) use ($livelli, $uno, $due) {
+                if (str_contains($r['query'], 'inventoryAdjustQuantities')) {
+                    return Http::response(['data' => ['inventoryAdjustQuantities' => ['userErrors' => []]]]);
+                }
+
+                return Http::response(['data' => ['product' => ['variants' => [
+                    'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
+                    'nodes' => [$livelli($uno, 5), $livelli($due, 1)],
+                ]]]]);
+            },
+        ]);
+
+        $res = $this->canale()->pushInventory($p->fresh());
+
+        $this->assertTrue($res->success, $res->message);
+        Http::assertSent(function (Request $r) use ($due) {
+            if (! str_contains($r->data()['query'] ?? '', 'inventoryAdjustQuantities')) {
+                return false;
+            }
+            $input = $r['variables']['input'];
+
+            return $input['name'] === 'on_hand'                    // fisica, non "disponibile": gli ordini da spedire restano sottratti
+                && count($input['changes']) === 1                   // solo la variante cambiata
+                && $input['changes'][0]['delta'] === 2
+                && $input['changes'][0]['inventoryItemId'] === 'gid://shopify/InventoryItem/'.md5($due->sku)
+                && $input['changes'][0]['locationId'] === 'gid://shopify/Location/42';
+        });
+    }
+
+    public function test_senza_variazioni_di_giacenza_non_si_scrive_nulla(): void
+    {
+        $p = $this->prodotto(1, 1, '777');
+        $v = $p->varianti->first();
+        Http::fake([
+            '*/locations.json' => Http::response(['locations' => [['id' => 42]]]),
+            '*/graphql.json' => Http::response(['data' => ['product' => ['variants' => [
+                'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
+                'nodes' => [['sku' => $v->sku, 'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/1', 'inventoryLevel' => ['quantities' => [['quantity' => (int) $v->quantita]]]]]],
+            ]]]]),
+        ]);
+
+        $this->assertTrue($this->canale()->pushInventory($p)->success);
+
+        Http::assertNotSent(fn (Request $r) => str_contains($r->data()['query'] ?? '', 'inventoryAdjustQuantities'));
+    }
+
+    public function test_l_aggiornamento_di_un_prodotto_grande_non_sovrascrive_la_giacenza_delle_varianti_esistenti(): void
+    {
+        $p = $this->prodotto(11, 10, '777'); // 110 varianti, già su Shopify
+        $p->varianti()->update(['shopify_variant_id' => '9000']);
+        Http::fake([
+            '*/graphql.json' => Http::response($this->rispostaProductSet($p, '777')),
+            '*/locations.json' => Http::response(['locations' => [['id' => 42]]]),
+        ]);
+
+        $this->canale()->pushProduct($p->fresh());
+
+        Http::assertSent(fn (Request $r) => str_contains($r->data()['query'] ?? '', 'productSet')
+            && collect($r['variables']['input']['variants'])->every(fn ($v) => ! isset($v['inventoryQuantities'])));
     }
 
     /** Prodotto con le taglie create in ordine sparso, come arrivano da WinMino. */

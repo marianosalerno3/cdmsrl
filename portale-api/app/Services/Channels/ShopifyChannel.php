@@ -11,6 +11,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Shopify Admin REST API.
@@ -51,6 +52,23 @@ class ShopifyChannel implements EcommerceChannel
     private const REST_MAX_VARIANTI = 100;
 
     public function pushProduct(Prodotto $prodotto): ChannelResult
+    {
+        $esisteva = filled($prodotto->shopify_product_id);
+        $res = $this->pushProductContenuto($prodotto);
+
+        // alla creazione le quantità partono con il prodotto; su un prodotto già presente si riallineano qui
+        // (con la quantità fisica, vedi allineaGiacenze), così un aggiornamento di dati non rimette in vendita capi già venduti
+        if ($res->success && $esisteva) {
+            $stock = $this->allineaGiacenze($prodotto);
+            if (! $stock->success) {
+                Log::warning("Shopify: prodotto {$prodotto->codice} aggiornato ma giacenze non allineate: {$stock->message}");
+            }
+        }
+
+        return $res;
+    }
+
+    private function pushProductContenuto(Prodotto $prodotto): ChannelResult
     {
         $prodotto->loadMissing('varianti.taglia', 'varianti.colore', 'immagini');
 
@@ -96,39 +114,74 @@ class ShopifyChannel implements EcommerceChannel
             return ChannelResult::ok('Prodotto non ancora inviato a Shopify: giacenze non inviate');
         }
 
-        // con tante varianti l'aggiornamento una per una (2 chiamate ciascuna) supererebbe il tempo del job:
-        // si rimanda l'intero prodotto con productSet, che aggiorna anche le giacenze in un'unica chiamata
-        if ($prodotto->varianti->count() > self::REST_MAX_VARIANTI) {
-            return $this->pushProduct($prodotto);
-        }
+        return $this->allineaGiacenze($prodotto);
+    }
+
+    /**
+     * Giacenze di un prodotto già su Shopify: si imposta la quantità FISICA (on_hand), non la disponibile.
+     * Gli ordini di Shopify ancora da spedire restano "impegnati" e Shopify li sottrae da sé (disponibile = fisica − impegnata);
+     * quando partono, WinMino scala la giacenza col documento di spedizione e i due valori tornano a coincidere.
+     * Così l'import orario non rimette in vendita capi già venduti ma non ancora spediti.
+     * Si manda solo la differenza rispetto a ciò che c'è già su Shopify (2 chiamate per prodotto, non 2 per variante).
+     */
+    private function allineaGiacenze(Prodotto $prodotto): ChannelResult
+    {
+        $prodotto->loadMissing('varianti');
 
         $location = $this->firstLocationId();
         if (! $location) {
             return ChannelResult::fail('Shopify: nessuna location disponibile');
         }
+        $locationGid = "gid://shopify/Location/{$location}";
 
-        $updated = 0;
-        foreach ($prodotto->varianti as $v) {
-            if (blank($v->shopify_variant_id)) {
-                continue;
-            }
-            $variant = $this->http()->get("{$this->base}/variants/{$v->shopify_variant_id}.json")->json('variant');
-            $inventoryItemId = $variant['inventory_item_id'] ?? null;
-            if (! $inventoryItemId) {
-                continue;
-            }
+        $query = 'query($id: ID!, $loc: ID!, $dopo: String) { product(id: $id) { variants(first: 250, after: $dopo) {
+            pageInfo { hasNextPage endCursor }
+            nodes { sku inventoryItem { id inventoryLevel(locationId: $loc) { quantities(names: ["on_hand"]) { quantity } } } }
+        } } }';
 
-            $res = $this->http()->post("{$this->base}/inventory_levels/set.json", [
-                'location_id' => $location,
-                'inventory_item_id' => $inventoryItemId,
-                'available' => (int) $v->quantita,
+        $esistenti = [];   // sku → [inventoryItemId, quantità fisica attuale]
+        $dopo = null;
+        do {
+            $res = $this->http()->timeout(60)->post("{$this->base}/graphql.json", [
+                'query' => $query,
+                'variables' => ['id' => "gid://shopify/Product/{$prodotto->shopify_product_id}", 'loc' => $locationGid, 'dopo' => $dopo],
             ]);
-            if ($res->successful()) {
-                $updated++;
+            if ($res->failed() || $res->json('errors') || $res->json('data.product') === null) {
+                return ChannelResult::fail('Shopify giacenze (lettura): '.mb_substr($res->body(), 0, 300));
+            }
+            foreach ($res->json('data.product.variants.nodes', []) as $n) {
+                $attuale = $n['inventoryItem']['inventoryLevel']['quantities'][0]['quantity'] ?? null;
+                if ($attuale !== null) {   // null = articolo non gestito in questa sede: non si può aggiustare
+                    $esistenti[(string) $n['sku']] = [$n['inventoryItem']['id'], (int) $attuale];
+                }
+            }
+            $dopo = $res->json('data.product.variants.pageInfo.hasNextPage') ? $res->json('data.product.variants.pageInfo.endCursor') : null;
+        } while ($dopo);
+
+        $cambi = [];
+        foreach ($prodotto->varianti as $v) {
+            if (! isset($esistenti[$v->sku])) {
+                continue;
+            }
+            [$itemId, $attuale] = $esistenti[$v->sku];
+            $delta = (int) $v->quantita - $attuale;
+            if ($delta !== 0) {
+                $cambi[] = ['inventoryItemId' => $itemId, 'locationId' => $locationGid, 'delta' => $delta];
             }
         }
 
-        return ChannelResult::ok("Giacenze aggiornate su Shopify ({$updated} varianti)");
+        foreach (array_chunk($cambi, 250) as $gruppo) {
+            $res = $this->http()->timeout(60)->post("{$this->base}/graphql.json", [
+                'query' => 'mutation($input: InventoryAdjustQuantitiesInput!) { inventoryAdjustQuantities(input: $input) { userErrors { field message } } }',
+                'variables' => ['input' => ['name' => 'on_hand', 'reason' => 'correction', 'changes' => $gruppo]],
+            ]);
+            $errori = $res->json('errors') ?? $res->json('data.inventoryAdjustQuantities.userErrors');
+            if ($res->failed() || ! empty($errori)) {
+                return ChannelResult::fail('Shopify giacenze: '.mb_substr($res->body(), 0, 300));
+            }
+        }
+
+        return ChannelResult::ok('Giacenze aggiornate su Shopify ('.count($cambi).' varianti cambiate)');
     }
 
     public function pullOrders(CarbonInterface $since): array
@@ -278,6 +331,7 @@ class ShopifyChannel implements EcommerceChannel
     {
         $p = $this->productPayload($prodotto);
         $location = $this->firstLocationId();
+        $varianteSku = $prodotto->varianti->keyBy('sku');
 
         $valori = fn (string $chiave) => collect($p['variants'])->pluck($chiave)->unique()->values()
             ->map(fn ($v) => ['name' => (string) $v])->all();
@@ -300,7 +354,8 @@ class ShopifyChannel implements EcommerceChannel
                 'sku' => $v['sku'],
                 'price' => $v['price'],
                 'inventoryItem' => ['tracked' => true],
-                'inventoryQuantities' => $location
+                // varianti già su Shopify: la giacenza non si sovrascrive qui (disponibile), la riallinea allineaGiacenze (fisica)
+                'inventoryQuantities' => ($location && blank($varianteSku->get($v['sku'])?->shopify_variant_id))
                     ? [['locationId' => "gid://shopify/Location/{$location}", 'name' => 'available', 'quantity' => (int) $v['inventory_quantity']]]
                     : null,
             ], fn ($x) => $x !== null))->values()->all(),
