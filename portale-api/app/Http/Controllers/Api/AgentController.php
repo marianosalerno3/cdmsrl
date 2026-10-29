@@ -68,7 +68,7 @@ class AgentController extends Controller
         return response()->json([
             'data' => Stagione::where('attiva', true)
                 ->orderByDesc('ordine')->orderBy('codice')
-                ->get(['codice', 'nome', 'programmata']),
+                ->get(['codice', 'nome']),
         ]);
     }
 

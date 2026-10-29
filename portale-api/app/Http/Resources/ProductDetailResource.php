@@ -15,6 +15,8 @@ class ProductDetailResource extends JsonResource
             ?? $request->user()?->listino_default
             ?? ListinoTipo::Standard;
 
+        $collezione = $this->collezione(); // stagione + linea: decide programmato e data di partenza
+
         return [
             'id' => $this->id,
             'codice' => $this->codice,
@@ -26,7 +28,8 @@ class ProductDetailResource extends JsonResource
             'tipo' => $this->tipo->value,
             'categoria' => $this->categoria?->nome,
             'stagione' => $this->stagione?->codice,
-            'programmata' => $this->isProgrammato(),
+            'programmata' => (bool) $collezione?->programmata,
+            'data_partenza' => $collezione?->programmata ? $collezione->data_partenza?->toDateString() : null,
             'genere' => $this->genere?->nome,
             'immagini' => $this->immagini->map(fn ($i) => $i->url)->values(),
             // taglie in ordine (42 → 60, poi XS…XXL, poi taglia unica), a prescindere da come arrivano da WinMino

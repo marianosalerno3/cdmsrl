@@ -68,6 +68,7 @@ function aggiungi() {
       prezzo: v.prezzo,
       quantita: x.q,
       programmata: !!props.product.programmata,
+      partenza: props.product.data_partenza || null,
     }
   })
   emit('add', lines)

@@ -6,6 +6,7 @@ use App\Enums\Linea;
 use App\Models\Categoria;
 use App\Models\Colore;
 use App\Models\Prodotto;
+use App\Models\Collezione;
 use App\Models\Stagione;
 use App\Models\Taglia;
 use App\Jobs\SyncProdottoEcommerce;
@@ -143,6 +144,11 @@ class SyncProdotti extends Command
                         'prezzo_base' => $a['_PREZZO'],
                         // 'attivo' NON toccato: è il flag "pubblica sul portale" gestito dal pannello
                     ]);
+
+                    // ogni coppia stagione + linea diventa una collezione, in pronto consegna finché non la si segna programmata
+                    if ($prodotto->stagione_id && $prodotto->linea) {
+                        Collezione::firstOrCreate(['stagione_id' => $prodotto->stagione_id, 'linea' => $prodotto->linea->value]);
+                    }
 
                     if ($prodotto->wasRecentlyCreated || $prodotto->wasChanged()) {
                         $cambiAnagrafica[$prodotto->id] = true;

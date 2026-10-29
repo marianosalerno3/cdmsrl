@@ -107,7 +107,7 @@ class ConfigurazioniSistema extends Page implements HasForms
                     ]),
 
                 Section::make('Regole commerciali (Portale B2B)')
-                    ->description('Valgono per gli ordini di agenti e clienti. Le stagioni "programmate" si impostano in Catalogo → Stagioni.')
+                    ->description('Valgono per gli ordini di agenti e clienti. Le collezioni (stagione + linea) "programmate" si impostano in Configurazione → Collezioni.')
                     ->columns(3)
                     ->schema([
                         TextInput::make('vat')->label('IVA')

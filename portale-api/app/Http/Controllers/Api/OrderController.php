@@ -49,7 +49,9 @@ class OrderController extends Controller
 
         $listino = $cliente->listinoEffettivo();
 
-        $ordine = DB::transaction(function () use ($request, $agente, $cliente, $listino, $daCliente) {
+        // pronto consegna e programmato non viaggiano insieme: il carrello diventa uno o due ordini,
+        // il pronto con la spedizione calcolata in automatico, il programmato con la spedizione da concordare
+        $ordini = DB::transaction(function () use ($request, $agente, $cliente, $listino, $daCliente) {
             $righeInput = collect($request->validated('righe'));
             $varianti = VarianteProdotto::with('prodotto.stagione')
                 ->whereIn('id', $righeInput->pluck('variante_id'))
@@ -57,12 +59,12 @@ class OrderController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            $righe = [];
+            $gruppi = ['pronto' => [], 'programmato' => []];
             foreach ($righeInput as $r) {
                 /** @var VarianteProdotto $v */
                 $v = $varianti[$r['variante_id']];
                 $prezzo = $this->prices->forVariant($v, $listino);
-                $righe[] = [
+                $gruppi[$v->prodotto->isProgrammato() ? 'programmato' : 'pronto'][] = [
                     'variante_prodotto_id' => $v->id,
                     'prodotto_codice' => $v->prodotto->codice,
                     'prodotto_nome' => $v->prodotto->nome,
@@ -76,50 +78,67 @@ class OrderController extends Controller
                 $v->decrement('quantita', $r['quantita']);
             }
 
-            $metodo = PaymentMethod::from($request->validated('metodo_pagamento'));
-            // ordine programmato = almeno una riga di una stagione "programmata" per la sua linea; altrimenti pronto
-            $programmato = $varianti->contains(fn ($v) => $v->prodotto->isProgrammato());
-            $spedizione = $this->prices->shippingFor(round(collect($righe)->sum('totale_riga'), 2), $programmato);
-            $totali = $this->prices->totals($righe, $spedizione);
+            $metodoScelto = PaymentMethod::from($request->validated('metodo_pagamento'));
+            $ordini = collect();
 
-            $ordine = OrdineB2B::create([
-                'agente_id' => $agente?->id,
-                'cliente_id' => $cliente->id,
-                'da_cliente' => $daCliente,
-                'cliente_nome' => $cliente->denominazione,
-                'cliente_email' => $cliente->email,
-                'cliente_telefono' => $cliente->telefono,
-                'indirizzo_spedizione' => $request->validated('indirizzo_spedizione')
-                    ?: trim("{$cliente->indirizzo}, {$cliente->cap} {$cliente->citta} ({$cliente->provincia})", ', '),
-                'stato' => OrderStatus::Ricevuto,
-                'metodo_pagamento' => $metodo,
-                'listino_applicato' => $listino,
-                'programmato' => $programmato,
-                'note_agente' => $request->validated('note_agente'),
-                ...$totali,
-            ]);
+            foreach ($gruppi as $tipo => $righe) {
+                if ($righe === []) {
+                    continue;
+                }
+                $programmato = $tipo === 'programmato';
+                // il programmato non si paga online (totale e spedizione si definiscono poi col commerciale): bonifico
+                $metodo = $programmato && $metodoScelto === PaymentMethod::Stripe ? PaymentMethod::Bonifico : $metodoScelto;
+                $spedizione = $this->prices->shippingFor(round(collect($righe)->sum('totale_riga'), 2), $programmato);
+                $totali = $this->prices->totals($righe, $spedizione);
 
-            $ordine->righe()->createMany($righe);
+                $ordine = OrdineB2B::create([
+                    'agente_id' => $agente?->id,
+                    'cliente_id' => $cliente->id,
+                    'da_cliente' => $daCliente,
+                    'cliente_nome' => $cliente->denominazione,
+                    'cliente_email' => $cliente->email,
+                    'cliente_telefono' => $cliente->telefono,
+                    'indirizzo_spedizione' => $request->validated('indirizzo_spedizione')
+                        ?: trim("{$cliente->indirizzo}, {$cliente->cap} {$cliente->citta} ({$cliente->provincia})", ', '),
+                    'stato' => OrderStatus::Ricevuto,
+                    'metodo_pagamento' => $metodo,
+                    'listino_applicato' => $listino,
+                    'programmato' => $programmato,
+                    'note_agente' => $request->validated('note_agente'),
+                    ...$totali,
+                ]);
 
-            return $ordine;
+                $ordine->righe()->createMany($righe);
+                $ordini->push($ordine);
+            }
+
+            return $ordini;
         });
 
         // l'ordine è partito: il carrello salvato non serve più (e niente promemoria)
         Carrello::where('cliente_id', $cliente->id)->delete();
 
-        // notifica il backoffice CDM (il commerciale carica l'ordine su WinMino)
-        if ($destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))))) {
-            Mail::to($destinatari)->queue(new NuovoOrdineBackofficeMail($ordine));
+        $destinatari = array_filter(array_map('trim', explode(',', (string) config('portale.backoffice_email'))));
+
+        foreach ($ordini as $ordine) {
+            // notifica il backoffice CDM (il commerciale carica l'ordine su WinMino)
+            if ($destinatari) {
+                Mail::to($destinatari)->queue(new NuovoOrdineBackofficeMail($ordine));
+            }
+
+            // conferma al cliente subito; con la carta solo quando il pagamento è incassato (vedi StripeService)
+            if ($ordine->metodo_pagamento !== PaymentMethod::Stripe) {
+                app(ConfermaOrdineCliente::class)->invia($ordine);
+            }
         }
 
-        // conferma al cliente subito; con la carta solo quando il pagamento è incassato (vedi StripeService)
-        if ($ordine->metodo_pagamento !== PaymentMethod::Stripe) {
-            app(ConfermaOrdineCliente::class)->invia($ordine);
-        }
+        // `data` è l'ordine da pagare per primo (il pronto, se c'è); `orders` li elenca tutti
+        $ordini = $ordini->map(fn ($o) => $o->fresh('righe'));
 
         return response()->json([
-            'message' => 'Ordine inviato con successo!',
-            'data' => $this->serialize($ordine->fresh('righe')),
+            'message' => $ordini->count() > 1 ? 'Ordini inviati con successo!' : 'Ordine inviato con successo!',
+            'data' => $this->serialize($ordini->first()),
+            'orders' => $ordini->map(fn ($o) => $this->serialize($o))->values(),
         ], 201);
     }
 
@@ -235,6 +254,7 @@ class OrderController extends Controller
             'totale_pezzi' => $ordine->totale_pezzi,
             'data_ordine' => $ordine->data_ordine?->toDateString(),
             'pagato' => $ordine->isPagato(),
+            'programmato' => (bool) $ordine->programmato,
             'righe' => $ordine->righe->map(fn ($r) => [
                 'prodotto' => $r->prodotto_nome,
                 'codice' => $r->prodotto_codice,

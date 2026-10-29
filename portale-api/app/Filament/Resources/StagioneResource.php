@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\Linea;
 use App\Filament\Resources\StagioneResource\Pages;
 use App\Models\Stagione;
 use Filament\Forms;
@@ -33,19 +32,6 @@ class StagioneResource extends Resource
             Forms\Components\DatePicker::make('data_inizio'),
             Forms\Components\DatePicker::make('data_fine'),
             Forms\Components\Toggle::make('attiva')->default(true),
-            Forms\Components\Toggle::make('programmata')
-                ->helperText('Stagione di ordini programmati (evasione differita). Vale per tutte le linee, salvo le eccezioni qui sotto.'),
-            Forms\Components\Repeater::make('programmata_linee')
-                ->label('Eccezioni per linea')
-                ->helperText('Per le linee elencate la stagione è programmata o in pronto consegna a prescindere dal valore sopra. Es.: stagione programmata, ma Clara G. in pronto.')
-                ->schema([
-                    Forms\Components\Select::make('linea')->label('Linea')->options(Linea::class)->required()->distinct(),
-                    Forms\Components\Select::make('programmata')->label('Per questa linea')
-                        ->options([1 => 'Programmata', 0 => 'Pronto consegna'])->required()
-                        ->afterStateHydrated(fn ($component, $state) => $component->state($state === null ? null : (int) (bool) $state))
-                        ->dehydrateStateUsing(fn ($state) => (bool) (int) $state),
-                ])
-                ->columns(2)->defaultItems(0)->addActionLabel('Aggiungi eccezione')->columnSpanFull(),
             Forms\Components\TextInput::make('ordine')->numeric()->default(0)
                 ->helperText('Ordine di visualizzazione: valori alti in cima'),
         ]);
@@ -58,7 +44,6 @@ class StagioneResource extends Resource
                 Tables\Columns\TextColumn::make('codice')->searchable()->sortable()->weight('bold'),
                 Tables\Columns\TextColumn::make('nome')->toggleable(),
                 Tables\Columns\IconColumn::make('attiva')->boolean(),
-                Tables\Columns\IconColumn::make('programmata')->boolean(),
                 Tables\Columns\TextColumn::make('prodotti_count')->counts('prodotti')->label('Prodotti'),
                 Tables\Columns\TextColumn::make('data_inizio')->date('d/m/Y')->toggleable(),
                 Tables\Columns\TextColumn::make('data_fine')->date('d/m/Y')->toggleable(),

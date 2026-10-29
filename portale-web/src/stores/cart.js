@@ -3,7 +3,7 @@ import { useConfig } from '@/stores/config'
 import { api } from '@/lib/api'
 
 /**
- * Riga carrello: { varianteId, prodottoId, codice, nome, taglia, colore, sku, prezzo, quantita, programmata }
+ * Riga carrello: { varianteId, prodottoId, codice, nome, taglia, colore, sku, prezzo, quantita, programmata, partenza }
  * Il carrello è vincolato al cliente selezionato (vedi stores/customer.js -> select()).
  */
 const state = reactive({
@@ -78,17 +78,22 @@ export function useCart() {
   const subtotal = computed(() =>
     round2(state.items.reduce((s, i) => s + i.prezzo * i.quantita, 0)),
   )
-  // ordine programmato = almeno una riga di una stagione "programmata"
-  const programmato = computed(() => state.items.some((i) => i.programmata))
-  // pronto: fissa fino alla soglia, da soglia in su % sul totale merce; programmato: da definire (0)
+  // pronto consegna e programmato (collezione stagione + linea) sono due ordini separati
+  const righePronto = computed(() => state.items.filter((i) => !i.programmata))
+  const righeProgrammate = computed(() => state.items.filter((i) => i.programmata))
+  const programmato = computed(() => righeProgrammate.value.length > 0)
+  const misto = computed(() => righeProgrammate.value.length > 0 && righePronto.value.length > 0)
+  const sommaRighe = (righe) => round2(righe.reduce((s, i) => s + i.prezzo * i.quantita, 0))
+  const subtotalPronto = computed(() => sommaRighe(righePronto.value))
+  const subtotalProgrammato = computed(() => sommaRighe(righeProgrammate.value))
+  // pronto: fissa fino alla soglia, da soglia in su % sul totale merce; programmato: da definire col commerciale
   const shipping = computed(() => {
-    if (!state.items.length) return 0
-    if (programmato.value) return 0 // ordine programmato: la spedizione la calcola il commerciale
+    if (!righePronto.value.length) return 0
     const soglia = Number(config.spedizione_pronto_soglia ?? 300)
     const fissa = Number(config.spedizione_pronto_fissa ?? 10)
-    if (subtotal.value < soglia) return fissa
+    if (subtotalPronto.value < soglia) return fissa
     // percentuale arrotondata per eccesso all'euro, mai sotto la spesa fissa (stessa regola dell'API)
-    return Math.max(fissa, Math.ceil(round2((subtotal.value * Number(config.spedizione_pronto_perc ?? 3)) / 100)))
+    return Math.max(fissa, Math.ceil(round2((subtotalPronto.value * Number(config.spedizione_pronto_perc ?? 3)) / 100)))
   })
   const vatRate = computed(() => Number(config.vat ?? 22))
   const vatAmount = computed(() => round2(((subtotal.value + shipping.value) * vatRate.value) / 100))
@@ -150,7 +155,12 @@ export function useCart() {
     totalPieces,
     subtotal,
     shipping,
+    righePronto,
+    righeProgrammate,
+    subtotalPronto,
+    subtotalProgrammato,
     programmato,
+    misto,
     vatRate,
     vatAmount,
     total,

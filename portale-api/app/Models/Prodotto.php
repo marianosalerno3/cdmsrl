@@ -43,10 +43,16 @@ class Prodotto extends Model
         return $this->belongsTo(Stagione::class);
     }
 
-    /** Programmato = la sua stagione è programmata per la sua linea (stagione + linea). */
+    /** La collezione (stagione + linea) di questo prodotto, se censita. */
+    public function collezione(): ?Collezione
+    {
+        return Collezione::per($this->stagione_id, $this->linea);
+    }
+
+    /** Programmato = la sua collezione (stagione + linea) è segnata come programmata; altrimenti pronto consegna. */
     public function isProgrammato(): bool
     {
-        return (bool) $this->stagione?->isProgrammataPer($this->linea);
+        return (bool) $this->collezione()?->programmata;
     }
 
     public function genere(): BelongsTo
