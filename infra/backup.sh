@@ -13,7 +13,12 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-[ -f .env ] && { set -a; . ./.env; set +a; } || true
+# .env è fatto per docker compose, non per la shell (spazi, UID…): si leggono solo le variabili che servono
+env_get() { [ -f .env ] && grep -E "^$1=" .env | tail -n1 | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$//' || true; }
+BACKUP_DIR="${BACKUP_DIR:-$(env_get BACKUP_DIR)}"
+BACKUP_KEEP_DAYS="${BACKUP_KEEP_DAYS:-$(env_get BACKUP_KEEP_DAYS)}"
+BACKUP_REMOTE="${BACKUP_REMOTE:-$(env_get BACKUP_REMOTE)}"
+BACKUP_PING_URL="${BACKUP_PING_URL:-$(env_get BACKUP_PING_URL)}"
 
 DIR="${BACKUP_DIR:-/var/backups/portale}"
 KEEP="${BACKUP_KEEP_DAYS:-14}"
