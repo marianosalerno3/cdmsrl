@@ -115,7 +115,7 @@ principali* (ordini, fatturato, provvigioni, stato Shopify), *Ordini per Stato*,
 
 - **WinMino (import)** — `sync:prodotti`, `sync:clienti` · `App\Services\Erp\*` ·
   [`docs/winmino-integration.md`](../docs/winmino-integration.md)
-- **Shopify (push B2C)** — `sync:giacenze`, `orders:pull-ecommerce` ·
+- **Shopify (push B2C)** — `sync:giacenze` ·
   `App\Services\Channels\*` · [`docs/ecommerce-channels.md`](../docs/ecommerce-channels.md)
 - **Stripe** — pagamenti carta B2B (`checkout-session` / `verify-stripe-payment` / webhook)
 

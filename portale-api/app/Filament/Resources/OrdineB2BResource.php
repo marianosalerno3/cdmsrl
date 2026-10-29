@@ -76,6 +76,12 @@ class OrdineB2BResource extends Resource
         ]);
     }
 
+    /** Solo gli ordini B2B: gli ordini e-commerce importati in passato da Shopify non si mostrano. */
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->b2b();
+    }
+
     public static function table(Table $table): Table
     {
         return $table

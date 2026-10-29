@@ -15,8 +15,5 @@ Schedule::command('sync:clienti')->dailyAt('03:00');
 // durante l'import (salvataggi senza eventi), quindi questo giro notturno e' la rete di sicurezza.
 Schedule::command('sync:giacenze')->dailyAt('04:00')->withoutOverlapping();
 
-// Import ordini dai canali e-commerce (tab "Ordini Shopify").
-Schedule::command('orders:pull-ecommerce')->everyFifteenMinutes()->withoutOverlapping();
-
 // Promemoria ai clienti per i carrelli fermi (solo con consenso alle comunicazioni; vedi carrelli:promemoria).
 Schedule::command('carrelli:promemoria')->hourly()->withoutOverlapping();

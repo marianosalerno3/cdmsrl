@@ -24,7 +24,7 @@ Le credenziali sono in **Configurazioni Sistema** (pannello, cifrate).
 | Azione riga Prodotto "Invia a Shopify" | `SyncProdottoEcommerce::dispatch(id, 'shopify', 'full')` |
 | `sync:giacenze` (ogni 30') / pulsante "Sincronizza Prodotti e Giacenze" | accoda un job `inventory` per ogni prodotto attivo (`--full` per anagrafica completa, `--codice=`) |
 | Observer `VarianteProdottoObserver` | se **sync giacenze automatica** è ON, ogni modifica di `quantita` accoda un push `inventory` |
-| `orders:pull-ecommerce` (ogni 15') | importa gli ordini Shopify in `ordini_b2b` (dedup su `shopify_order_id`) → tab "Ordini Shopify" |
+| ~~`orders:pull-ecommerce`~~ | rimosso: gli ordini Shopify non si importano più nel portale (le giacenze restano allineate da WinMino) |
 
 ## Mapping prodotto
 

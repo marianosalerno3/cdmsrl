@@ -19,7 +19,7 @@ trait FiltraOrdiniDashboard
         $da = $filters['data_inizio'] ?? null;
         $a = $filters['data_fine'] ?? null;
 
-        return OrdineB2B::query()
+        return OrdineB2B::query()->b2b()
             ->when($da, fn (Builder $q) => $q->whereDate('data_ordine', '>=', $da))
             ->when($a, fn (Builder $q) => $q->whereDate('data_ordine', '<=', $a))
             ->when($stagione, fn (Builder $q) => $q->whereHas(
