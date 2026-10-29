@@ -22,7 +22,7 @@ return [
 
     // Versione di informativa privacy e condizioni d'uso mostrate in registrazione (da aggiornare a ogni modifica
     // dei testi in portale-web/src/views/PrivacyView.vue e TerminiView.vue): viene salvata con il consenso.
-    'privacy_versione' => env('PRIVACY_VERSIONE', '2026-10'),
+    'privacy_versione' => env('PRIVACY_VERSIONE', '2026-10-29'),
 
     // Indirizzo a cui arrivano le risposte alle email del portale (il mittente tecnico non ha una casella).
     'mail_reply_to' => env('MAIL_REPLY_TO', ''),

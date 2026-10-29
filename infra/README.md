@@ -73,6 +73,43 @@ Rollback: `git checkout <tag-precedente> && docker compose up -d --build`.
 | Shell Laravel | `docker compose exec api php artisan tinker` |
 | Ricalcolo cache | `docker compose exec api php artisan optimize:clear` |
 
+## Backup automatico
+
+`infra/backup.sh` salva il database (dump SQL compresso) e i file caricati (immagini prodotto e documenti dei
+clienti), controlla che i file siano integri e cancella i backup più vecchi di 14 giorni (`BACKUP_KEEP_DAYS`).
+Salva in `/var/backups/portale` (`BACKUP_DIR`).
+
+Attivazione sul server (una volta sola):
+
+```bash
+chmod +x /opt/cdmsrl/infra/backup.sh
+/opt/cdmsrl/infra/backup.sh                       # prova a mano: deve finire con "Backup ok"
+( crontab -l 2>/dev/null; echo '30 2 * * * /opt/cdmsrl/infra/backup.sh >> /var/log/portale-backup.log 2>&1' ) | crontab -
+```
+
+Parte ogni notte alle 02:30 (prima dell'import clienti delle 03:00).
+
+Due protezioni da aggiungere, perché un backup sullo stesso server non salva da un guasto del server:
+
+- **Copia fuori dal server:** attiva i *Backup* del server dalla console Hetzner (snapshot giornalieri automatici,
+  +20% sul prezzo) oppure imposta `BACKUP_REMOTE` in `infra/.env` verso uno spazio esterno raggiungibile con ssh.
+- **Avviso se il backup non gira:** crea un controllo gratuito su healthchecks.io (periodo 1 giorno), metti il suo
+  indirizzo in `BACKUP_PING_URL` in `infra/.env`: lo script lo chiama solo a backup riuscito, e se non lo vede ti
+  scrive.
+
+Ripristino (da provare almeno una volta su un server di prova):
+
+```bash
+gunzip -c /var/backups/portale/db-AAAAMMGG-HHMMSS.sql.gz | docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'
+docker compose exec -T api tar xzf - -C /var/www/html/storage/app < /var/backups/portale/files-AAAAMMGG-HHMMSS.tar.gz
+```
+
+## Controllo che il sito sia raggiungibile
+
+Un controllo dall'esterno (non dal server stesso). Il più semplice: un account gratuito su UptimeRobot o
+BetterStack con due monitor, uno su `https://<APP_DOMAIN>` e uno su `https://<API_DOMAIN>/up`, con avviso via email
+o Telegram.
+
 ## Volumi persistenti
 
 `db-data` (database) · `api-storage` (upload immagini prodotto) · `api-logs`

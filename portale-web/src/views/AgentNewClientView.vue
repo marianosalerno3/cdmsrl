@@ -54,6 +54,14 @@ async function submit() {
       <p class="mt-1 text-sm text-zinc-500">
         Proponi un nuovo cliente per il tuo portafoglio. Sarà sottoposto ad approvazione.
       </p>
+      <p class="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+        Informa il cliente che i suoi dati sono trattati come descritto nell'<RouterLink
+          to="/privacy"
+          target="_blank"
+          class="underline"
+          >informativa sulla privacy</RouterLink
+        >.
+      </p>
 
       <form class="mt-6 grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
         <div class="sm:col-span-2">

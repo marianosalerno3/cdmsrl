@@ -5,9 +5,9 @@ import { COMPANY_NAME } from '@/lib/brand'
 <template>
   <div class="mx-auto max-w-2xl p-4 py-8">
     <div class="card space-y-4 p-6 text-sm leading-relaxed text-zinc-700 sm:p-8">
-      <RouterLink to="/register-b2b" class="btn-link">← Torna alla registrazione</RouterLink>
+      <RouterLink to="/" class="btn-link">← Torna al portale</RouterLink>
       <h1 class="text-xl font-bold tracking-tight text-ink">Condizioni d'uso del portale B2B</h1>
-      <p class="text-xs text-zinc-500">Portale B2B {{ COMPANY_NAME }} — versione 2026-10</p>
+      <p class="text-xs text-zinc-500">Portale B2B {{ COMPANY_NAME }} — versione 2026-10-29</p>
 
       <h2 class="pt-2 text-base font-bold text-ink">1. A chi è rivolto</h2>
       <p>
@@ -38,6 +38,11 @@ import { COMPANY_NAME } from '@/lib/brand'
         <li>
           Disponibilità, prezzi e informazioni possono cambiare: l'ordine inviato dal portale è una richiesta che viene
           presa in carico e confermata dal nostro ufficio commerciale, che ti contatta in caso di variazioni.
+        </li>
+        <li>
+          Nel carrello i capi pronti consegna e quelli in programma sono separati in ordini distinti. Per quelli pronti
+          la spedizione è calcolata in automatico; per quelli in programma la data di partenza è indicata sul prodotto e
+          le spese di spedizione si concordano con il nostro ufficio commerciale.
         </li>
         <li>Pagamento, consegna e resi seguono le condizioni commerciali concordate con la nostra azienda.</li>
       </ul>

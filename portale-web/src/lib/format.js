@@ -6,8 +6,8 @@ export function money(value) {
   return eur.format(Number.isFinite(n) ? n : 0)
 }
 
-// nomi dei listini come li usa l'azienda (l'API restituisce il codice interno: standard, plus5, plus10, outlet)
-const LISTINI = { standard: 'OT', plus5: 'OT+5', plus10: 'OT+10', outlet: 'Outlet' }
+// nomi dei listini come li usa l'azienda (l'API restituisce il codice interno: standard, plus5, plus10)
+const LISTINI = { standard: 'OT', plus5: 'OT+5', plus10: 'OT+10' }
 
 export function listinoLabel(value) {
   return LISTINI[value] ?? String(value ?? 'OT')

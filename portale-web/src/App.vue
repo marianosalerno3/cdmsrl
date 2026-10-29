@@ -30,5 +30,9 @@ onMounted(async () => {
     <main :class="showChrome ? 'mx-auto max-w-6xl px-4 py-6 sm:py-8' : ''">
       <RouterView v-if="!booting" />
     </main>
+    <footer v-if="showChrome" class="mx-auto max-w-6xl px-4 pb-8 text-center text-xs text-zinc-400">
+      <RouterLink to="/privacy" class="underline">Privacy e cookie</RouterLink> ·
+      <RouterLink to="/condizioni" class="underline">Condizioni d'uso</RouterLink>
+    </footer>
   </div>
 </template>

@@ -83,7 +83,7 @@ async function submit() {
           Nuovo cliente? Registrati come B2B (l'accesso viene attivato dopo l'approvazione)
         </RouterLink>
         <p class="text-xs text-zinc-400">
-          <RouterLink to="/privacy" class="underline">Privacy</RouterLink> ·
+          <RouterLink to="/privacy" class="underline">Privacy e cookie</RouterLink> ·
           <RouterLink to="/condizioni" class="underline">Condizioni d'uso</RouterLink>
         </p>
       </div>

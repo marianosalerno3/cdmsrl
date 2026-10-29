@@ -62,7 +62,6 @@ return [
         ListinoTipo::Standard->value => env('WINMINO_LISTINO_STANDARD', env('WINMINO_LISTINO_BASE', 'CLARAG')),
         ListinoTipo::Plus5->value => env('WINMINO_LISTINO_PLUS5', 'PLUS5'),
         ListinoTipo::Plus10->value => env('WINMINO_LISTINO_PLUS10', 'PLUS10'),
-        ListinoTipo::Outlet->value => env('WINMINO_LISTINO_OUTLET', 'OUT'),
     ],
 
     // enum portale -> codice pagamento WinMino (VARCHAR 6) — TODO confermare i codici

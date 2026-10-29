@@ -14,7 +14,6 @@ enum ListinoTipo: string implements HasLabel
     case Standard = 'standard';
     case Plus5 = 'plus5';
     case Plus10 = 'plus10';
-    case Outlet = 'outlet';
 
     public function getLabel(): string
     {
@@ -23,7 +22,6 @@ enum ListinoTipo: string implements HasLabel
             self::Standard => 'OT',
             self::Plus5 => 'OT+5',
             self::Plus10 => 'OT+10',
-            self::Outlet => 'Outlet',
         };
     }
 
@@ -34,7 +32,6 @@ enum ListinoTipo: string implements HasLabel
             self::Standard => 1.0,
             self::Plus5 => 1.05,
             self::Plus10 => 1.10,
-            self::Outlet => 0.60,
         };
     }
 }

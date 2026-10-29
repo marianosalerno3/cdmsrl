@@ -5,11 +5,11 @@ import { COMPANY_NAME } from '@/lib/brand'
 <template>
   <div class="mx-auto max-w-2xl p-4 py-8">
     <div class="card space-y-4 p-6 text-sm leading-relaxed text-zinc-700 sm:p-8">
-      <RouterLink to="/register-b2b" class="btn-link">← Torna alla registrazione</RouterLink>
-      <h1 class="text-xl font-bold tracking-tight text-ink">Informativa sulla privacy</h1>
+      <RouterLink to="/" class="btn-link">← Torna al portale</RouterLink>
+      <h1 class="text-xl font-bold tracking-tight text-ink">Informativa sulla privacy e sui cookie</h1>
       <p class="text-xs text-zinc-500">
-        Informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) — Portale B2B {{ COMPANY_NAME }} —
-        versione 2026-10
+        Informativa ai sensi degli artt. 13 e 14 del Regolamento UE 2016/679 (GDPR) — Portale B2B {{ COMPANY_NAME }} —
+        versione 2026-10-29
       </p>
 
       <h2 class="pt-2 text-base font-bold text-ink">1. Titolare del trattamento</h2>
@@ -30,6 +30,12 @@ import { COMPANY_NAME } from '@/lib/brand'
         <li><strong>Dati degli ordini:</strong> prodotti, importi, indirizzi di consegna, metodo di pagamento.</li>
         <li><strong>Dati tecnici di utilizzo</strong> del portale, necessari al funzionamento e alla sicurezza.</li>
       </ul>
+      <p>
+        <strong>Clienti inseriti da un agente o già presenti nel nostro gestionale:</strong> per questi clienti
+        trattiamo i dati dell'azienda e del referente (ragione sociale, partita IVA, recapiti, indirizzi) che l'agente
+        o il nostro gestionale ci hanno già fornito nell'ambito del rapporto commerciale. Vale per loro questa stessa
+        informativa; l'accesso al portale resta comunque subordinato alla nostra approvazione.
+      </p>
 
       <h2 class="pt-2 text-base font-bold text-ink">3. Perché li trattiamo e su quale base</h2>
       <ul class="list-disc space-y-1 pl-5">
@@ -79,6 +85,40 @@ import { COMPANY_NAME } from '@/lib/brand'
       <p>
         I dati contrassegnati come obbligatori nel modulo sono necessari per valutare la richiesta e attivare
         l'accesso: senza di essi non è possibile completare la registrazione.
+      </p>
+
+      <h2 class="pt-2 text-base font-bold text-ink">8. Cookie e dati salvati nel browser</h2>
+      <p>
+        Il portale usa <strong>solo strumenti tecnici</strong>, necessari al funzionamento: per questo non mostriamo un
+        banner e non serve il tuo consenso (art. 122 del Codice privacy). Non usiamo cookie di profilazione, di
+        pubblicità o di statistica, né strumenti di terze parti per tracciarti.
+      </p>
+      <ul class="list-disc space-y-1 pl-5">
+        <li>
+          <strong>Sessione di accesso:</strong> un identificativo di sessione, salvato nel browser, che ti mantiene
+          collegato finché non esci. Viene cancellato al logout.
+        </li>
+        <li>
+          <strong>Preferenze di navigazione:</strong> ultimo cliente selezionato e filtri del catalogo (ricerca, linea,
+          categoria, stagione), salvati nel browser solo per riaprirti il portale come l'avevi lasciato. Restano sul tuo
+          dispositivo e non vengono inviati a nessuno.
+        </li>
+        <li>
+          <strong>Pagamento con carta:</strong> se scegli la carta vieni portato sulla pagina sicura di Stripe, che può
+          usare propri cookie tecnici per la sicurezza e la prevenzione delle frodi, secondo la
+          <a href="https://stripe.com/it/privacy" class="underline" target="_blank" rel="noopener">informativa di Stripe</a>.
+        </li>
+      </ul>
+      <p>
+        I caratteri del sito sono ospitati sui nostri server, quindi la visita non invia il tuo indirizzo IP a servizi
+        esterni. Puoi cancellare i dati salvati dal browser in qualsiasi momento dalle sue impostazioni: dovrai solo
+        accedere di nuovo.
+      </p>
+
+      <h2 class="pt-2 text-base font-bold text-ink">9. Aggiornamenti</h2>
+      <p>
+        Se questa informativa cambia in modo rilevante ti avvisiamo, e la versione in vigore è sempre quella pubblicata
+        in questa pagina (indicata in alto).
       </p>
 
     </div>
