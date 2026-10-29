@@ -77,8 +77,8 @@ class OrderController extends Controller
             }
 
             $metodo = PaymentMethod::from($request->validated('metodo_pagamento'));
-            // ordine programmato = almeno una riga di una stagione "programmata"; altrimenti pronto
-            $programmato = $varianti->contains(fn ($v) => (bool) $v->prodotto->stagione?->programmata);
+            // ordine programmato = almeno una riga di una stagione "programmata" per la sua linea; altrimenti pronto
+            $programmato = $varianti->contains(fn ($v) => $v->prodotto->isProgrammato());
             $spedizione = $this->prices->shippingFor(round(collect($righe)->sum('totale_riga'), 2), $programmato);
             $totali = $this->prices->totals($righe, $spedizione);
 

@@ -26,7 +26,7 @@ class ProductDetailResource extends JsonResource
             'tipo' => $this->tipo->value,
             'categoria' => $this->categoria?->nome,
             'stagione' => $this->stagione?->codice,
-            'programmata' => (bool) $this->stagione?->programmata,
+            'programmata' => $this->isProgrammato(),
             'genere' => $this->genere?->nome,
             'immagini' => $this->immagini->map(fn ($i) => $i->url)->values(),
             // taglie in ordine (42 → 60, poi XS…XXL, poi taglia unica), a prescindere da come arrivano da WinMino

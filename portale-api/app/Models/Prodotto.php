@@ -43,6 +43,12 @@ class Prodotto extends Model
         return $this->belongsTo(Stagione::class);
     }
 
+    /** Programmato = la sua stagione è programmata per la sua linea (stagione + linea). */
+    public function isProgrammato(): bool
+    {
+        return (bool) $this->stagione?->isProgrammataPer($this->linea);
+    }
+
     public function genere(): BelongsTo
     {
         return $this->belongsTo(Genere::class);
