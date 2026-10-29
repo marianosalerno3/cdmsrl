@@ -43,6 +43,7 @@ class ConfigurazioniSistema extends Page implements HasForms
         'metodi_pagamento',
         'promemoria_carrello_attivo',
         'promemoria_carrello_ore',
+        'sync_clienti_attivo',
     ];
 
     /** Moltiplicatori B2C per linea: campo del form → linea (vuoto = vale il ricarico generale). */
@@ -74,6 +75,7 @@ class ConfigurazioniSistema extends Page implements HasForms
             ...collect(AppConfig::payload())->only(self::REGOLE)->all(),
             'promemoria_carrello_attivo' => (bool) AppConfig::get('promemoria_carrello_attivo', true),
             'promemoria_carrello_ore' => (int) AppConfig::get('promemoria_carrello_ore', 24),
+            'sync_clienti_attivo' => (bool) AppConfig::get('sync_clienti_attivo', true),
         ]);
     }
 
@@ -130,6 +132,8 @@ class ConfigurazioniSistema extends Page implements HasForms
                             ->numeric()->minValue(0)->maxValue(100)->suffix('%')->required()
                             ->helperText('% sul totale merce, oltre la soglia, arrotondata per eccesso all\'euro (15,75 € → 16 €). Gli ordini programmati non hanno spese a carrello.'),
 
+                        Toggle::make('sync_clienti_attivo')->label('Import automatico clienti da WinMino')
+                            ->helperText('Ogni notte (03:00) importa e aggiorna l\'anagrafica clienti. Spento, i clienti si importano solo a richiesta (sync:clienti --force).'),
                         Toggle::make('promemoria_carrello_attivo')->label('Promemoria carrelli fermi')
                             ->helperText('Email al cliente (solo se ha dato il consenso alle comunicazioni) o, se non è sul portale, all\'agente che ha caricato il carrello.'),
                         TextInput::make('promemoria_carrello_ore')->label('Promemoria dopo')
@@ -206,7 +210,7 @@ class ConfigurazioniSistema extends Page implements HasForms
             $valore = $state[$chiave];
             AppConfig::put($chiave, match ($chiave) {
                 'metodi_pagamento' => array_values((array) $valore),
-                'promemoria_carrello_attivo' => (bool) $valore,
+                'promemoria_carrello_attivo', 'sync_clienti_attivo' => (bool) $valore,
                 default => (float) $valore,
             });
         }

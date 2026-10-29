@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Agente;
+use App\Models\AppConfig;
 use App\Models\Cliente;
 use App\Services\Erp\ErpManager;
 use Illuminate\Console\Command;
@@ -18,12 +19,18 @@ use Illuminate\Support\Collection;
  */
 class SyncClienti extends Command
 {
-    protected $signature = 'sync:clienti {--full : ignora la data di ultimo sync e reimporta tutto}';
+    protected $signature = 'sync:clienti {--full : ignora la data di ultimo sync e reimporta tutto} {--force : importa anche se l\'import automatico dei clienti è spento}';
 
     protected $description = 'Import/aggiornamento clienti da ERP';
 
     public function handle(ErpManager $erp): int
     {
+        if (! AppConfig::get('sync_clienti_attivo', true) && ! $this->option('force')) {
+            $this->warn('Import automatico dei clienti spento (Configurazioni Sistema). Skip. Usa --force per importare comunque.');
+
+            return self::SUCCESS;
+        }
+
         if (! $erp->isConfigured()) {
             $this->warn('Nessun ERP configurato (Configurazioni Sistema → ERP). Skip.');
 
