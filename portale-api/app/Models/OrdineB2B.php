@@ -25,7 +25,7 @@ class OrdineB2B extends Model
         'stato', 'metodo_pagamento', 'listino_applicato',
         'subtotale', 'spese_spedizione', 'iva_perc', 'iva_importo', 'totale', 'totale_pezzi',
         'note_agente', 'programmato', 'da_cliente', 'data_ordine',
-        'stripe_session_id', 'stripe_payment_intent', 'pagato_at',
+        'stripe_session_id', 'stripe_payment_intent', 'pagato_at', 'rimborsato_importo', 'rimborsato_at',
         'email_conferma_inviata_at', 'inviato_erp_at', 'idesterno', 'erp_response',
         'shopify_order_id', 'ecommerce_payload',
     ];
@@ -45,6 +45,8 @@ class OrdineB2B extends Model
             'da_cliente' => 'boolean',
             'data_ordine' => 'date',
             'pagato_at' => 'datetime',
+            'rimborsato_importo' => 'decimal:2',
+            'rimborsato_at' => 'datetime',
             'email_conferma_inviata_at' => 'datetime',
             'inviato_erp_at' => 'datetime',
             'ecommerce_payload' => 'array',
@@ -90,5 +92,16 @@ class OrdineB2B extends Model
     public function isPagato(): bool
     {
         return $this->pagato_at !== null;
+    }
+
+    public function isRimborsato(): bool
+    {
+        return $this->rimborsato_at !== null && (float) $this->rimborsato_importo > 0;
+    }
+
+    /** Rimborsato per intero: l'importo restituito copre il totale dell'ordine. */
+    public function isRimborsatoTotalmente(): bool
+    {
+        return $this->isRimborsato() && (float) $this->rimborsato_importo >= (float) $this->totale;
     }
 }

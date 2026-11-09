@@ -95,7 +95,9 @@ class OrdineB2BResource extends Resource
                 Tables\Columns\TextColumn::make('totale')->money('EUR')->sortable(),
                 Tables\Columns\TextColumn::make('metodo_pagamento')->label('Pagamento')->badge()->toggleable(),
                 Tables\Columns\IconColumn::make('pagato_at')->label('Pagato')->boolean()
-                    ->state(fn (OrdineB2B $r) => $r->pagato_at !== null)->toggleable(),
+                    ->state(fn (OrdineB2B $r) => $r->pagato_at !== null && ! $r->isRimborsatoTotalmente())->toggleable(),
+                Tables\Columns\TextColumn::make('rimborsato_importo')->label('Rimborsato')->money('EUR')
+                    ->placeholder('—')->color('danger')->toggleable(),
                 Tables\Columns\TextColumn::make('data_ordine')->label('Data Ordine')->date('d/m/Y H:i')->sortable(),
             ])
             ->defaultSort('data_ordine', 'desc')

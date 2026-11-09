@@ -43,6 +43,10 @@ class ViewOrdineB2B extends ViewRecord
                 TextEntry::make('agente.nome')->label('Agente'),
                 TextEntry::make('listino_applicato')->label('Listino'),
                 TextEntry::make('email_conferma_inviata_at')->label('Email conferma')->dateTime('d/m/Y H:i')->placeholder('non inviata'),
+                TextEntry::make('pagato_at')->label('Pagato il')->dateTime('d/m/Y H:i')->placeholder('non pagato'),
+                TextEntry::make('rimborsato_importo')->label('Rimborsato')->money('EUR')->color('danger')
+                    ->visible(fn ($record) => $record->isRimborsato())
+                    ->suffix(fn ($record) => $record->rimborsato_at ? ' il '.$record->rimborsato_at->format('d/m/Y H:i') : ''),
             ]),
             Section::make('Cliente')->columns(2)->schema([
                 TextEntry::make('cliente_nome'),

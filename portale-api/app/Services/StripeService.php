@@ -96,5 +96,65 @@ class StripeService
                 app(ConfermaOrdineCliente::class)->invia($ordine);
             }
         }
+
+        // rimborso fatto dalla dashboard di Stripe: lo riportiamo sull'ordine
+        if ($event->type === 'charge.refunded') {
+            $charge = $event->data->object;
+            $ordine = $charge->payment_intent
+                ? OrdineB2B::where('stripe_payment_intent', $charge->payment_intent)->first()
+                : null;
+            if ($ordine) {
+                $this->registraRimborso($ordine, ((int) $charge->amount_refunded) / 100);
+            }
+        }
+    }
+
+    /**
+     * Segna sull'ordine quanto Stripe ha restituito. Con un rimborso totale l'ordine passa ad "Annullato",
+     * a meno che sia già partito (spedito/consegnato): in quel caso lo stato lo decide chi lo gestisce.
+     */
+    public function registraRimborso(OrdineB2B $ordine, float $importo): void
+    {
+        if ($importo <= 0) {
+            return;
+        }
+
+        $ordine->forceFill([
+            'rimborsato_importo' => round($importo, 2),
+            'rimborsato_at' => $ordine->rimborsato_at ?? now(),
+        ]);
+
+        if ($ordine->isRimborsatoTotalmente()
+            && ! in_array($ordine->stato, [OrderStatus::Spedito, OrderStatus::Consegnato], true)) {
+            $ordine->stato = OrderStatus::Annullato;
+        }
+
+        $ordine->save();
+    }
+
+    /**
+     * Rete di sicurezza e recupero: chiede a Stripe quali ordini pagati con carta sono stati rimborsati
+     * (utile per i rimborsi fatti prima che il portale li ascoltasse, o se il webhook non è arrivato).
+     *
+     * @return int numero di ordini aggiornati
+     */
+    public function sincronizzaRimborsi(): int
+    {
+        $aggiornati = 0;
+
+        OrdineB2B::whereNotNull('stripe_payment_intent')
+            ->whereNotNull('pagato_at')
+            ->whereNull('rimborsato_at')
+            ->each(function (OrdineB2B $ordine) use (&$aggiornati) {
+                $intent = $this->client()->paymentIntents->retrieve($ordine->stripe_payment_intent, ['expand' => ['latest_charge']]);
+                $rimborsato = ((int) ($intent->latest_charge->amount_refunded ?? 0)) / 100;
+
+                if ($rimborsato > 0) {
+                    $this->registraRimborso($ordine, $rimborsato);
+                    $aggiornati++;
+                }
+            });
+
+        return $aggiornati;
     }
 }
