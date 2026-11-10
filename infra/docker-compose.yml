@@ -67,12 +67,17 @@ services:
   queue:
     <<: *api-image
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    # l'immagine api controlla http://127.0.0.1:8080/up: queue e scheduler non hanno un server web e risulterebbero sempre "unhealthy"
+    healthcheck:
+      disable: true
     depends_on:
       - api
 
   scheduler:
     <<: *api-image
     command: php artisan schedule:work
+    healthcheck:
+      disable: true
     depends_on:
       - api
 
