@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+/* Design system del portale — ripreso dallo stack di riferimento:
+   sfondo grigio chiaro, card bianche arrotondate, tipografia Outfit,
+   bottoni neri a pillola, accento viola tenue. */
+@theme {
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0b0b0f;
+  --color-dark: #18181b;
+  --color-dark-glass: rgb(24 24 27 / 0.06);
+  --color-accent: #7c6cf0;
+  --color-canvas: #f3f4f6;
+
+  --radius-card: 1rem;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Componenti riutilizzati nelle view. In Tailwind v4 @apply accetta solo
+   utility note, quindi ogni classe è espansa senza comporre altre classi custom. */
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-black/5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5
+           text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5
+           text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50
+           bg-dark text-white hover:bg-black;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5
+           text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50
+           bg-dark-glass text-ink hover:bg-black/10;
+  }
+  .btn-link {
+    @apply text-sm font-semibold text-accent hover:underline;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm
+           outline-none placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-0;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-zinc-700;
+  }
+}

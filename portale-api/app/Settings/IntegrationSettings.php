@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Settings;
+
+use Spatie\LaravelSettings\Settings;
+
+/**
+ * Credenziali integrazioni, editabili dal pannello (pagina "Configurazioni Sistema").
+ * I valori sensibili vanno castati come "encrypted" (vedi config/settings.php).
+ */
+class IntegrationSettings extends Settings
+{
+    // Shopify (B2C)
+    public ?string $shopify_shop_domain = null;
+    public ?string $shopify_access_token = null;
+
+    // Stripe
+    public ?string $stripe_key = null;
+    public ?string $stripe_secret = null;
+    public ?string $stripe_webhook_secret = null;
+
+    // ERP (WinMino o equivalente)
+    public ?string $erp_driver = 'null';        // 'null' | 'winmino'
+    public ?string $erp_base_url = null;        // es. http://1.2.3.4:8080
+    public ?string $erp_username = null;
+    public ?string $erp_password = null;
+    public ?string $erp_api_key = null;         // deprecato: WinMino usa username/password
+
+    // Generali
+    public bool $sync_giacenze_automatica = false;
+
+    public static function group(): string
+    {
+        return 'integrations';
+    }
+
+    public static function encrypted(): array
+    {
+        return [
+            'shopify_access_token',
+            'stripe_secret',
+            'stripe_webhook_secret',
+            'erp_password',
+            'erp_api_key',
+        ];
+    }
+}

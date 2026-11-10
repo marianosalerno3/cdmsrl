@@ -1,0 +1,19 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.fleet/
+*.swp
+
+# --- comodo: dipendenze e artefatti (i sotto-progetti hanno il proprio .gitignore) ---
+**/vendor/
+**/node_modules/
+**/.env
+**/.env.backup
+**/.env.production
+**/storage/*.key
+**/public/build/
+**/public/hot
+**/public/storage
+**/.phpunit.result.cache
