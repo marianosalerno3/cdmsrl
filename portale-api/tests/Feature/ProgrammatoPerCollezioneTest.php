@@ -62,6 +62,24 @@ class ProgrammatoPerCollezioneTest extends TestCase
             ->assertOk()->assertJsonPath('data.programmata', false)->assertJsonPath('data.data_partenza', null);
     }
 
+    public function test_l_elenco_prodotti_segna_i_programmati(): void
+    {
+        $agente = Agente::create([
+            'codice_agente' => 'A301', 'nome' => 'Agente', 'email' => 'ag2@example.test',
+            'password' => 'password-agente', 'listino_default' => ListinoTipo::Standard, 'attivo' => true,
+        ]);
+        $pe27 = Stagione::create(['codice' => 'PE27', 'attiva' => true]);
+        Collezione::create(['stagione_id' => $pe27->id, 'linea' => 'CLASSE DI VALENTINA', 'programmata' => true]);
+        $programmato = $this->variante($pe27, Linea::ClasseDiValentina, 'E1');
+        $programmato->update(['quantita' => 0]); // senza giacenza: sul programmato non deve contare
+        $this->variante($pe27, Linea::ClaraG, 'E2');
+
+        $righe = collect($this->actingAs($agente, 'sanctum')->getJson('/api/products')->assertOk()->json('data'))->keyBy('codice');
+
+        $this->assertTrue($righe['E1']['programmata']);
+        $this->assertFalse($righe['E2']['programmata']);
+    }
+
     public function test_un_carrello_misto_diventa_due_ordini(): void
     {
         Mail::fake();
