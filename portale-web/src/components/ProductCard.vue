@@ -35,7 +35,11 @@ const priceLabel = computed(() => {
       <div class="mt-auto flex items-center justify-between pt-1">
         <span class="text-sm font-semibold">{{ priceLabel }}</span>
         <!-- sul programmato la giacenza non conta: niente "esaurito" e niente pezzi, solo l'etichetta -->
-        <span v-if="product.programmata" class="text-xs text-zinc-500">programmato</span>
+        <span
+          v-if="product.programmata"
+          class="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700"
+          >programmato</span
+        >
         <span
           v-else
           class="text-xs"
