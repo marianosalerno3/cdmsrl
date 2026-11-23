@@ -74,12 +74,12 @@ class ProdottoResource extends Resource
                         ->label('Genere')
                         ->helperText('Non gestito da WinMino: assegnalo qui.'),
                     Forms\Components\Select::make('pacchetto_id')
-                        ->relationship('pacchettoPortale', 'nome')->searchable()->preload()
+                        // solo i pacchetti della linea di questo prodotto
+                        ->relationship('pacchettoPortale', 'nome', modifyQueryUsing: fn ($query, $record) => $query
+                            ->where('linea', $record?->linea?->value)->orderBy('ordine')->orderBy('nome'))
+                        ->searchable()->preload()
                         ->label('Pacchetto')
-                        ->helperText('Per filtrare e ordinare il catalogo. I pacchetti si creano in Attributi Prodotto → Pacchetti.')
-                        ->createOptionForm([
-                            Forms\Components\TextInput::make('nome')->required()->maxLength(255)->unique('pacchetti', 'nome'),
-                        ]),
+                        ->helperText('Per filtrare e ordinare il catalogo: compaiono i pacchetti della linea del prodotto. Si creano in Attributi Prodotto → Pacchetti.'),
                     Forms\Components\Placeholder::make('mapping')
                         ->label('Mapping Shopify')
                         ->content(fn (?Prodotto $record) => $record?->shopify_product_id ?: 'non pubblicato'),
@@ -130,7 +130,9 @@ class ProdottoResource extends Resource
                 Tables\Filters\SelectFilter::make('linea')->label('Linea')->options(Linea::class),
                 Tables\Filters\SelectFilter::make('stagione')->relationship('stagione', 'codice'),
                 Tables\Filters\SelectFilter::make('categoria')->relationship('categoria', 'nome'),
-                Tables\Filters\SelectFilter::make('pacchetto_id')->label('Pacchetto')->relationship('pacchettoPortale', 'nome'),
+                Tables\Filters\SelectFilter::make('pacchetto_id')->label('Pacchetto')
+                    ->options(fn () => Pacchetto::orderBy('linea')->orderBy('ordine')->get()
+                        ->mapWithKeys(fn (Pacchetto $p) => [$p->id => $p->nome.($p->linea ? ' — '.$p->linea->value : '')])),
                 Tables\Filters\Filter::make('senza_pacchetto')
                     ->label('Senza pacchetto')
                     ->query(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->whereNull('pacchetto_id')),
@@ -173,14 +175,23 @@ class ProdottoResource extends Resource
                         ->form([
                             Forms\Components\Select::make('pacchetto_id')
                                 ->label('Pacchetto')
-                                ->options(fn () => Pacchetto::orderBy('ordine')->orderBy('nome')->pluck('nome', 'id'))
+                                ->options(fn () => Pacchetto::orderBy('linea')->orderBy('ordine')->get()
+                                    ->mapWithKeys(fn (Pacchetto $p) => [$p->id => $p->nome.($p->linea ? ' — '.$p->linea->value : '')]))
                                 ->searchable()
                                 ->required()
-                                ->helperText('Sostituisce il pacchetto attuale dei prodotti selezionati.'),
+                                ->helperText('Sostituisce il pacchetto attuale. Si assegnano solo i prodotti della linea del pacchetto.'),
                         ])
                         ->action(function ($records, array $data) {
-                            $records->each->update(['pacchetto_id' => $data['pacchetto_id']]);
-                            Notification::make()->success()->title($records->count().' prodotti assegnati al pacchetto')->send();
+                            $pacchetto = Pacchetto::findOrFail($data['pacchetto_id']);
+                            // un pacchetto vale per la sua linea: i prodotti di altre linee restano come sono
+                            $adatti = $records->filter(fn (Prodotto $r) => $r->linea === $pacchetto->linea);
+                            $adatti->each->update(['pacchetto_id' => $pacchetto->id]);
+                            $scartati = $records->count() - $adatti->count();
+                            Notification::make()
+                                ->title($adatti->count().' prodotti assegnati a «'.$pacchetto->nome.'»'
+                                    .($scartati ? ' — '.$scartati.' di un\'altra linea non assegnati' : ''))
+                                ->{$scartati ? 'warning' : 'success'}()
+                                ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
                     Tables\Actions\BulkAction::make('togli_pacchetto')

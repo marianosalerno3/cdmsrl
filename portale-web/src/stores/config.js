@@ -12,7 +12,7 @@ const state = reactive({
     giorni_evasione_programmati: 30,
     metodi_pagamento: ['bonifico', 'contrassegno', 'stripe'],
   },
-  filters: { lines: [], categories: [], seasons: [], packages: [], fabrics: [] },
+  filters: { lines: [], categories: [], seasons: [], packages: [], packages_by_line: {}, fabrics: [] },
   loaded: false,
 })
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Linea;
 use App\Enums\ListinoTipo;
 use App\Models\Agente;
 use App\Models\Pacchetto;
@@ -28,11 +29,11 @@ class PacchettiCatalogoTest extends TestCase
         ]);
     }
 
-    private function prodotto(string $codice, ?Pacchetto $pacchetto = null, bool $attivo = true): Prodotto
+    private function prodotto(string $codice, ?Pacchetto $pacchetto = null, bool $attivo = true, ?Linea $linea = null): Prodotto
     {
         $p = Prodotto::create([
             'codice' => $codice, 'nome' => 'Abito '.$codice, 'prezzo_base' => 100,
-            'attivo' => $attivo, 'pacchetto_id' => $pacchetto?->id,
+            'attivo' => $attivo, 'pacchetto_id' => $pacchetto?->id, 'linea' => $linea ?? $pacchetto?->linea,
         ]);
         VarianteProdotto::create(['prodotto_id' => $p->id, 'sku' => 'SKU'.$codice, 'prezzo' => 100, 'quantita' => 5]);
 
@@ -47,8 +48,8 @@ class PacchettiCatalogoTest extends TestCase
 
     public function test_ordinamento_per_pacchetto_segue_l_ordine_scelto_e_mette_in_fondo_i_senza_pacchetto(): void
     {
-        $cerimonia = Pacchetto::create(['nome' => 'Cerimonia', 'ordine' => 1]);
-        $capsule = Pacchetto::create(['nome' => 'Capsule', 'ordine' => 2]);
+        $cerimonia = Pacchetto::create(['nome' => 'Cerimonia', 'linea' => Linea::ClasseDiValentina, 'ordine' => 1]);
+        $capsule = Pacchetto::create(['nome' => 'Capsule', 'linea' => Linea::ClasseDiValentina, 'ordine' => 2]);
         $this->prodotto('A1', $capsule);
         $this->prodotto('B1');            // senza pacchetto
         $this->prodotto('C1', $cerimonia);
@@ -63,7 +64,7 @@ class PacchettiCatalogoTest extends TestCase
 
     public function test_si_puo_filtrare_per_pacchetto_insieme_alla_ricerca(): void
     {
-        $cerimonia = Pacchetto::create(['nome' => 'Cerimonia', 'ordine' => 1]);
+        $cerimonia = Pacchetto::create(['nome' => 'Cerimonia', 'linea' => Linea::ClasseDiValentina, 'ordine' => 1]);
         $this->prodotto('A1');
         $this->prodotto('C1', $cerimonia);
         $this->prodotto('E1', $cerimonia);
@@ -76,26 +77,74 @@ class PacchettiCatalogoTest extends TestCase
 
     public function test_l_elenco_filtri_ha_i_pacchetti_in_ordine_e_solo_quelli_con_prodotti_pubblicati(): void
     {
-        $secondo = Pacchetto::create(['nome' => 'Capsule', 'ordine' => 2]);
-        $primo = Pacchetto::create(['nome' => 'Cerimonia', 'ordine' => 1]);
-        $vuoto = Pacchetto::create(['nome' => 'Vuoto', 'ordine' => 3]);
-        $nascosto = Pacchetto::create(['nome' => 'Nascosto', 'ordine' => 4]);
+        $secondo = Pacchetto::create(['nome' => 'Capsule', 'linea' => Linea::ClasseDiValentina, 'ordine' => 2]);
+        $primo = Pacchetto::create(['nome' => 'Cerimonia', 'linea' => Linea::ClasseDiValentina, 'ordine' => 1]);
+        $vuoto = Pacchetto::create(['nome' => 'Vuoto', 'linea' => Linea::ClasseDiValentina, 'ordine' => 3]);
+        $nascosto = Pacchetto::create(['nome' => 'Nascosto', 'linea' => Linea::ClasseDiValentina, 'ordine' => 4]);
         $this->prodotto('A1', $secondo);
         $this->prodotto('B1', $primo);
         $this->prodotto('C1', $nascosto, attivo: false);
 
         $this->getJson('/api/filters')->assertOk()->assertExactJson([
-            'lines' => array_column(\App\Enums\Linea::cases(), 'value'),
+            'lines' => array_column(Linea::cases(), 'value'),
             'categories' => [],
             'seasons' => [],
             'packages' => ['Cerimonia', 'Capsule'],
+            'packages_by_line' => ['CLASSE DI VALENTINA' => ['Cerimonia', 'Capsule']],
             'fabrics' => [],
         ]);
     }
 
+    public function test_ogni_linea_vede_solo_i_suoi_pacchetti_anche_con_lo_stesso_nome(): void
+    {
+        $classeBasici = Pacchetto::create(['nome' => 'Basici', 'linea' => Linea::ClasseDiValentina, 'ordine' => 1]);
+        $classeSera = Pacchetto::create(['nome' => 'Sera', 'linea' => Linea::ClasseDiValentina, 'ordine' => 2]);
+        $claraBasici = Pacchetto::create(['nome' => 'Basici', 'linea' => Linea::ClaraG, 'ordine' => 3]); // stesso nome, altra linea
+        $claraEstate = Pacchetto::create(['nome' => 'Estate', 'linea' => Linea::ClaraG, 'ordine' => 4]);
+        $this->prodotto('A1', $classeBasici);
+        $this->prodotto('B1', $classeSera);
+        $this->prodotto('C1', $claraBasici);
+        $this->prodotto('D1', $claraEstate);
+
+        $filtri = $this->getJson('/api/filters')->assertOk()->json();
+        $this->assertSame(['Basici', 'Sera'], $filtri['packages_by_line']['CLASSE DI VALENTINA']);
+        $this->assertSame(['Basici', 'Estate'], $filtri['packages_by_line']['CLARA G']);
+        $this->assertSame(['Basici', 'Sera', 'Estate'], $filtri['packages']); // elenco generale: nomi senza doppioni
+
+        // il filtro per nome vale dentro la linea scelta
+        $this->assertSame(['A1'], $this->codici('?line=CLASSE DI VALENTINA&package=Basici'));
+        $this->assertSame(['C1'], $this->codici('?line=CLARA G&package=Basici'));
+        // il pacchetto di un'altra linea non porta niente
+        $this->assertSame([], $this->codici('?line=CLASSE DI VALENTINA&package=Estate'));
+    }
+
+    public function test_la_migrazione_separa_un_pacchetto_condiviso_tra_due_linee(): void
+    {
+        // torno allo stato precedente (pacchetti senza linea, nome unico) e ci metto i dati com'erano in produzione
+        $migrazione = require database_path('migrations/2026_11_23_000002_add_linea_to_pacchetti.php');
+        $migrazione->down();
+
+        $storie = Pacchetto::forceCreate(['nome' => 'ROSSO', 'ordine' => 1]);
+        $basici = Pacchetto::forceCreate(['nome' => 'BASICI A COLORI', 'ordine' => 2]);
+        $vuoto = Pacchetto::forceCreate(['nome' => 'VUOTO', 'ordine' => 3]);
+        $a = $this->prodotto('A1', $storie, linea: Linea::ClasseDiValentina);
+        $b = $this->prodotto('B1', $basici, linea: Linea::ClasseDiValentina);
+        $c = $this->prodotto('C1', $basici, linea: Linea::ClaraG);
+
+        $migrazione->up();
+
+        $this->assertSame('CLASSE DI VALENTINA', $storie->fresh()->linea->value);
+        $this->assertNull($vuoto->fresh()->linea); // vuoto: la linea la sceglie CDM
+        $this->assertSame('CLARA G', $c->fresh()->pacchettoPortale->linea->value);
+        $this->assertSame('BASICI A COLORI', $c->fresh()->pacchettoPortale->nome);
+        $this->assertNotSame($b->fresh()->pacchetto_id, $c->fresh()->pacchetto_id); // ora sono due pacchetti, uno per linea
+        $this->assertSame('CLASSE DI VALENTINA', $b->fresh()->pacchettoPortale->linea->value);
+        $this->assertSame(4, Pacchetto::count());
+    }
+
     public function test_elenco_e_dettaglio_espongono_il_pacchetto(): void
     {
-        $pacchetto = Pacchetto::create(['nome' => 'Cerimonia', 'ordine' => 1]);
+        $pacchetto = Pacchetto::create(['nome' => 'Cerimonia', 'linea' => Linea::ClasseDiValentina, 'ordine' => 1]);
         $con = $this->prodotto('A1', $pacchetto);
         $senza = $this->prodotto('B1');
         $agente = $this->agente();

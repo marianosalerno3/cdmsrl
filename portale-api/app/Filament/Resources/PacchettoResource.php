@@ -2,17 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\Linea;
 use App\Filament\Resources\PacchettoResource\Pages;
 use App\Models\Pacchetto;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Illuminate\Validation\Rules\Unique;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
 /**
- * Pacchetti del catalogo, creati da CDM. Si assegnano ai prodotti (uno per prodotto) da Catalogo → Prodotti
- * e servono a filtrare e a ordinare il catalogo degli agenti. L'ordine tra pacchetti si cambia trascinando le righe.
+ * Pacchetti del catalogo, creati da CDM per una linea. Si assegnano ai prodotti di quella linea (uno per prodotto)
+ * da Catalogo → Prodotti e servono a filtrare e a ordinare il catalogo degli agenti. L'ordine si cambia trascinando le righe.
  */
 class PacchettoResource extends Resource
 {
@@ -31,8 +34,13 @@ class PacchettoResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Select::make('linea')
+                ->options(Linea::class)->required()->live()
+                ->helperText('Nel catalogo, scegliendo questa linea, compaiono solo i suoi pacchetti.'),
             Forms\Components\TextInput::make('nome')
-                ->required()->maxLength(255)->unique(ignoreRecord: true),
+                ->required()->maxLength(255)
+                // il nome è unico dentro la linea: due linee possono avere un pacchetto con lo stesso nome
+                ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('linea', $get('linea'))),
             Forms\Components\TextInput::make('ordine')->numeric()->default(0)->minValue(0)
                 ->helperText('Più è basso, prima compare nel catalogo ordinato per pacchetto. Puoi anche trascinare le righe nell\'elenco.'),
         ]);
@@ -43,11 +51,15 @@ class PacchettoResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nome')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('linea')->label('Linea')->badge()->sortable(),
                 Tables\Columns\TextColumn::make('prodotti_count')->counts('prodotti')->label('Prodotti'),
                 Tables\Columns\TextColumn::make('ordine')->sortable()->toggleable(),
             ])
             ->defaultSort('ordine')
             ->reorderable('ordine')
+            ->filters([
+                Tables\Filters\SelectFilter::make('linea')->label('Linea')->options(Linea::class),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()

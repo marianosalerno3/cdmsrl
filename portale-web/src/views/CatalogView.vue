@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api, errorMessage } from '@/lib/api'
 import { useConfig } from '@/stores/config'
 import { useCustomer } from '@/stores/customer'
@@ -21,6 +21,9 @@ const pack = ref(localStorage.getItem('catalog_package') || '')
 const sort = ref(localStorage.getItem('catalog_sort') || '')
 const page = ref(Number(localStorage.getItem('catalog_page')) || 1)
 
+// i pacchetti sono per linea: scelta la linea, il menu mostra solo i suoi
+const linePackages = computed(() => (line.value ? filters.packages_by_line?.[line.value] ?? [] : []))
+
 const products = ref([])
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 const loading = ref(false)
@@ -33,6 +36,10 @@ watch(search, () => {
     page.value = 1
     fetch()
   }, 350)
+})
+// cambiando linea, un pacchetto scelto che non appartiene alla nuova linea va tolto (prima del nuovo caricamento)
+watch(line, () => {
+  if (pack.value && !linePackages.value.includes(pack.value)) pack.value = ''
 })
 watch([line, category, season, pack, sort], () => {
   page.value = 1
@@ -94,7 +101,7 @@ onMounted(async () => {
     }
   }
   // un pacchetto cancellato (o svuotato) non deve lasciare il catalogo vuoto per un filtro salvato nel browser
-  if (pack.value && !filters.packages.includes(pack.value)) pack.value = ''
+  if (pack.value && !linePackages.value.includes(pack.value)) pack.value = ''
   if (sort.value === 'pacchetto' && !filters.packages.length) sort.value = ''
   fetch()
 })
@@ -123,9 +130,11 @@ onMounted(async () => {
         </select>
         <!-- pacchetti creati da CDM: compaiono solo se ce n'è almeno uno con prodotti pubblicati -->
         <template v-if="filters.packages.length">
-          <select v-model="pack" class="field">
-            <option value="">Tutti i pacchetti</option>
-            <option v-for="p in filters.packages" :key="p" :value="p">{{ p }}</option>
+          <select v-model="pack" class="field" :disabled="!linePackages.length">
+            <option value="">
+              {{ !line ? 'Pacchetti: scegli prima la linea' : linePackages.length ? 'Tutti i pacchetti' : 'Nessun pacchetto per questa linea' }}
+            </option>
+            <option v-for="p in linePackages" :key="p" :value="p">{{ p }}</option>
           </select>
           <select v-model="sort" class="field">
             <option value="">Ordina per codice</option>

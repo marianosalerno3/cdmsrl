@@ -32,8 +32,10 @@ class ProductController extends Controller
                 ->whereHas('categoria', fn ($q) => $q->where('nome', $cat)))
             ->when($request->string('season')->toString(), fn ($q, $s) => $q
                 ->whereHas('stagione', fn ($q) => $q->where('codice', $s)))
+            // il nome del pacchetto vale dentro la linea scelta (due linee possono avere pacchetti con lo stesso nome)
             ->when($request->string('package')->toString(), fn ($q, $p) => $q
-                ->whereHas('pacchettoPortale', fn ($q) => $q->where('nome', $p)))
+                ->whereHas('pacchettoPortale', fn ($q) => $q->where('nome', $p)
+                    ->when($request->string('line')->toString(), fn ($q, $line) => $q->where('linea', $line))))
             // ordinamento per pacchetto: prima i pacchetti nell'ordine deciso da CDM, in fondo i prodotti senza pacchetto
             // (sottoquery e non join: le colonne `nome`/`codice` dei filtri sopra restano non ambigue)
             ->when($request->string('sort')->toString() === 'pacchetto', fn ($q) => $q
