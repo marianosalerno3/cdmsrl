@@ -33,6 +33,7 @@ class ProductResource extends JsonResource
             'linea' => $this->linea?->value,
             'categoria' => $this->categoria?->nome,
             'stagione' => $this->stagione?->codice,
+            'pacchetto' => $this->pacchettoPortale?->nome,
             'tipo' => $this->tipo->value,
             'programmata' => isset($programmate[$this->stagione_id.'|'.$this->linea?->value]),
             'giacenza_totale' => (int) $this->varianti->sum('quantita'),

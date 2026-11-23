@@ -7,6 +7,7 @@ use App\Enums\ProdottoTipo;
 use App\Filament\Resources\ProdottoResource\Pages;
 use App\Filament\Resources\ProdottoResource\RelationManagers\VariantiRelationManager;
 use App\Jobs\SyncProdottoEcommerce;
+use App\Models\Pacchetto;
 use App\Models\Prodotto;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -55,7 +56,7 @@ class ProdottoResource extends Resource
                     Forms\Components\Textarea::make('descrizione')->disabled()->columnSpanFull()->rows(2),
                     Forms\Components\TextInput::make('composizione')->disabled(),
                     Forms\Components\TextInput::make('tessuto')->disabled(),
-                    Forms\Components\TextInput::make('pacchetto')->disabled()->label('Pacchetto/Confezione'),
+                    Forms\Components\TextInput::make('pacchetto')->disabled()->label('Pacchetto ERP (confezione)'),
                     Forms\Components\TextInput::make('tipo')
                         ->disabled()->formatStateUsing(fn ($state) => $state instanceof ProdottoTipo ? $state->getLabel() : $state),
                     Forms\Components\TextInput::make('categoria.nome')->disabled()->label('Categoria'),
@@ -72,6 +73,13 @@ class ProdottoResource extends Resource
                         ->relationship('genere', 'nome')->searchable()->preload()
                         ->label('Genere')
                         ->helperText('Non gestito da WinMino: assegnalo qui.'),
+                    Forms\Components\Select::make('pacchetto_id')
+                        ->relationship('pacchettoPortale', 'nome')->searchable()->preload()
+                        ->label('Pacchetto')
+                        ->helperText('Per filtrare e ordinare il catalogo. I pacchetti si creano in Attributi Prodotto → Pacchetti.')
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('nome')->required()->maxLength(255)->unique('pacchetti', 'nome'),
+                        ]),
                     Forms\Components\Placeholder::make('mapping')
                         ->label('Mapping Shopify')
                         ->content(fn (?Prodotto $record) => $record?->shopify_product_id ?: 'non pubblicato'),
@@ -108,6 +116,7 @@ class ProdottoResource extends Resource
                 Tables\Columns\TextColumn::make('nome')->searchable()->wrap()->limit(45),
                 Tables\Columns\TextColumn::make('linea')->label('Linea')->badge()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('categoria.nome')->label('Categoria')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('pacchettoPortale.nome')->label('Pacchetto')->badge()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('stagione.codice')->label('Stagione')->badge()->sortable(),
                 Tables\Columns\TextColumn::make('tipo')->badge(),
                 Tables\Columns\TextColumn::make('varianti_count')->counts('varianti')->label('Varianti'),
@@ -121,6 +130,10 @@ class ProdottoResource extends Resource
                 Tables\Filters\SelectFilter::make('linea')->label('Linea')->options(Linea::class),
                 Tables\Filters\SelectFilter::make('stagione')->relationship('stagione', 'codice'),
                 Tables\Filters\SelectFilter::make('categoria')->relationship('categoria', 'nome'),
+                Tables\Filters\SelectFilter::make('pacchetto_id')->label('Pacchetto')->relationship('pacchettoPortale', 'nome'),
+                Tables\Filters\Filter::make('senza_pacchetto')
+                    ->label('Senza pacchetto')
+                    ->query(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->whereNull('pacchetto_id')),
                 Tables\Filters\TernaryFilter::make('attivo')->label('Pubblicato'),
                 Tables\Filters\Filter::make('senza_immagini')
                     ->label('Senza immagini')
@@ -154,6 +167,31 @@ class ProdottoResource extends Resource
                     Tables\Actions\BulkAction::make('nascondi')
                         ->icon('heroicon-o-eye-slash')
                         ->action(fn ($records) => $records->each->update(['attivo' => false])),
+                    Tables\Actions\BulkAction::make('assegna_pacchetto')
+                        ->label('Assegna a un pacchetto')
+                        ->icon('heroicon-o-archive-box')
+                        ->form([
+                            Forms\Components\Select::make('pacchetto_id')
+                                ->label('Pacchetto')
+                                ->options(fn () => Pacchetto::orderBy('ordine')->orderBy('nome')->pluck('nome', 'id'))
+                                ->searchable()
+                                ->required()
+                                ->helperText('Sostituisce il pacchetto attuale dei prodotti selezionati.'),
+                        ])
+                        ->action(function ($records, array $data) {
+                            $records->each->update(['pacchetto_id' => $data['pacchetto_id']]);
+                            Notification::make()->success()->title($records->count().' prodotti assegnati al pacchetto')->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    Tables\Actions\BulkAction::make('togli_pacchetto')
+                        ->label('Togli dal pacchetto')
+                        ->icon('heroicon-o-minus-circle')
+                        ->requiresConfirmation()
+                        ->action(function ($records) {
+                            $records->each->update(['pacchetto_id' => null]);
+                            Notification::make()->success()->title($records->count().' prodotti tolti dal pacchetto')->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('Elimina')
                         ->modalHeading('Eliminare i prodotti selezionati?')

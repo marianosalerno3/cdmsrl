@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductDetailResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Cliente;
+use App\Models\Pacchetto;
 use App\Models\Prodotto;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,7 +21,7 @@ class ProductController extends Controller
 
         $prodotti = Prodotto::query()
             ->where('attivo', true)
-            ->with(['categoria', 'stagione', 'immagini', 'varianti'])
+            ->with(['categoria', 'stagione', 'pacchettoPortale', 'immagini', 'varianti'])
             ->when($request->string('search')->toString(), function ($q, $term) {
                 $q->where(fn ($q) => $q
                     ->where('nome', 'like', "%{$term}%")
@@ -31,6 +32,14 @@ class ProductController extends Controller
                 ->whereHas('categoria', fn ($q) => $q->where('nome', $cat)))
             ->when($request->string('season')->toString(), fn ($q, $s) => $q
                 ->whereHas('stagione', fn ($q) => $q->where('codice', $s)))
+            ->when($request->string('package')->toString(), fn ($q, $p) => $q
+                ->whereHas('pacchettoPortale', fn ($q) => $q->where('nome', $p)))
+            // ordinamento per pacchetto: prima i pacchetti nell'ordine deciso da CDM, in fondo i prodotti senza pacchetto
+            // (sottoquery e non join: le colonne `nome`/`codice` dei filtri sopra restano non ambigue)
+            ->when($request->string('sort')->toString() === 'pacchetto', fn ($q) => $q
+                ->orderByRaw('(select ordine from pacchetti where pacchetti.id = prodotti.pacchetto_id) is null')
+                ->orderBy(Pacchetto::select('ordine')->whereColumn('pacchetti.id', 'prodotti.pacchetto_id'))
+                ->orderBy(Pacchetto::select('nome')->whereColumn('pacchetti.id', 'prodotti.pacchetto_id')))
             ->orderBy('codice')
             ->paginate(24)
             ->withQueryString();
@@ -45,7 +54,7 @@ class ProductController extends Controller
         $request->merge(['__listino' => $listino->value]);
 
         $prodotto->load([
-            'categoria', 'stagione', 'genere', 'immagini',
+            'categoria', 'stagione', 'genere', 'pacchettoPortale', 'immagini',
             'varianti.taglia', 'varianti.colore', 'varianti.immagini',
         ]);
 

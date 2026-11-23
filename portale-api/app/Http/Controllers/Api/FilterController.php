@@ -19,8 +19,10 @@ class FilterController extends Controller
             'lines' => array_column(\App\Enums\Linea::cases(), 'value'),
             'categories' => Categoria::orderBy('ordine')->orderBy('nome')->pluck('nome'),
             'seasons' => Stagione::orderByDesc('ordine')->orderBy('codice')->pluck('codice'),
-            'packages' => \App\Models\Prodotto::query()
-                ->whereNotNull('pacchetto')->distinct()->pluck('pacchetto'),
+            // pacchetti creati da CDM nel pannello, nell'ordine scelto; solo quelli con almeno un prodotto pubblicato
+            'packages' => \App\Models\Pacchetto::query()
+                ->whereHas('prodotti', fn ($q) => $q->where('attivo', true))
+                ->orderBy('ordine')->orderBy('nome')->pluck('nome'),
             'fabrics' => \App\Models\Prodotto::query()
                 ->whereNotNull('tessuto')->distinct()->pluck('tessuto'),
         ]);

@@ -19,7 +19,7 @@ class Prodotto extends Model
 
     protected $fillable = [
         'codice', 'nome', 'descrizione', 'composizione', 'tessuto', 'pacchetto', 'linea',
-        'tipo', 'unita', 'categoria_id', 'stagione_id', 'genere_id',
+        'tipo', 'unita', 'categoria_id', 'stagione_id', 'genere_id', 'pacchetto_id',
         'prezzo_base', 'attivo', 'shopify_product_id',
     ];
 
@@ -41,6 +41,12 @@ class Prodotto extends Model
     public function stagione(): BelongsTo
     {
         return $this->belongsTo(Stagione::class);
+    }
+
+    /** Pacchetto assegnato da CDM nel pannello (diverso dalla colonna testuale `pacchetto`, che arriva da WinMino). */
+    public function pacchettoPortale(): BelongsTo
+    {
+        return $this->belongsTo(Pacchetto::class, 'pacchetto_id');
     }
 
     /** La collezione (stagione + linea) di questo prodotto, se censita. */

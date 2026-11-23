@@ -17,6 +17,8 @@ const search = ref(localStorage.getItem('catalog_search') || '')
 const line = ref(localStorage.getItem('catalog_line') || '')
 const category = ref(localStorage.getItem('catalog_category') || '')
 const season = ref(localStorage.getItem('catalog_season') || '')
+const pack = ref(localStorage.getItem('catalog_package') || '')
+const sort = ref(localStorage.getItem('catalog_sort') || '')
 const page = ref(Number(localStorage.getItem('catalog_page')) || 1)
 
 const products = ref([])
@@ -32,7 +34,7 @@ watch(search, () => {
     fetch()
   }, 350)
 })
-watch([line, category, season], () => {
+watch([line, category, season, pack, sort], () => {
   page.value = 1
   fetch()
 })
@@ -43,6 +45,8 @@ function persist() {
   localStorage.setItem('catalog_line', line.value)
   localStorage.setItem('catalog_category', category.value)
   localStorage.setItem('catalog_season', season.value)
+  localStorage.setItem('catalog_package', pack.value)
+  localStorage.setItem('catalog_sort', sort.value)
   localStorage.setItem('catalog_page', String(page.value))
 }
 
@@ -61,6 +65,8 @@ async function fetch() {
         line: line.value || undefined,
         category: category.value || undefined,
         season: season.value || undefined,
+        package: pack.value || undefined,
+        sort: sort.value || undefined,
         page: page.value,
         customer_id: selected.value.id,
       },
@@ -87,6 +93,9 @@ onMounted(async () => {
       /* ignore */
     }
   }
+  // un pacchetto cancellato (o svuotato) non deve lasciare il catalogo vuoto per un filtro salvato nel browser
+  if (pack.value && !filters.packages.includes(pack.value)) pack.value = ''
+  if (sort.value === 'pacchetto' && !filters.packages.length) sort.value = ''
   fetch()
 })
 </script>
@@ -98,7 +107,7 @@ onMounted(async () => {
     <div class="card space-y-4 p-4">
       <CustomerSelect />
 
-      <div class="grid gap-3 sm:grid-cols-4">
+      <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <input v-model="search" class="field" placeholder="Cerca per nome o codice…" />
         <select v-model="line" class="field">
           <option value="">Tutte le linee</option>
@@ -112,6 +121,17 @@ onMounted(async () => {
           <option value="">Tutte le stagioni</option>
           <option v-for="s in filters.seasons" :key="s" :value="s">{{ s }}</option>
         </select>
+        <!-- pacchetti creati da CDM: compaiono solo se ce n'è almeno uno con prodotti pubblicati -->
+        <template v-if="filters.packages.length">
+          <select v-model="pack" class="field">
+            <option value="">Tutti i pacchetti</option>
+            <option v-for="p in filters.packages" :key="p" :value="p">{{ p }}</option>
+          </select>
+          <select v-model="sort" class="field">
+            <option value="">Ordina per codice</option>
+            <option value="pacchetto">Ordina per pacchetto</option>
+          </select>
+        </template>
       </div>
     </div>
 

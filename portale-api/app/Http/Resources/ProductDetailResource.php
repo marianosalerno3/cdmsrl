@@ -24,7 +24,7 @@ class ProductDetailResource extends JsonResource
             'descrizione' => $this->descrizione,
             'composizione' => $this->composizione,
             'tessuto' => $this->tessuto,
-            'pacchetto' => $this->pacchetto,
+            'pacchetto' => $this->pacchettoPortale?->nome, // quello assegnato da CDM nel portale, non l'etichetta ERP
             'tipo' => $this->tipo->value,
             'categoria' => $this->categoria?->nome,
             'stagione' => $this->stagione?->codice,
