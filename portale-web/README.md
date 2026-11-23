@@ -64,5 +64,5 @@ src/
 - Il **carrello è vincolato al cliente selezionato**: cambiando cliente si svuota.
 - Il calcolo **IVA 22% / spese spedizione / importo minimo** usa i valori di
   `GET /api/app-config`.
-- I video di sfondo della dashboard vanno in `public/videos/` (asset del brand,
-  non versionati).
+- L'immagine di presentazione della dashboard è `public/images/dashboard-hero.jpg`
+  (foto del lookbook, già ridotta a 1600 px): per cambiarla basta sostituire il file.

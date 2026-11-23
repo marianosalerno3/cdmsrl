@@ -19,7 +19,7 @@ const seasons = ref([])
 const season = ref(localStorage.getItem('dash_season') || '')
 
 // asset del brand serviti da public/ — path stringa per non farli risolvere da Vite
-const bgVideo = '/videos/dashboard-desktop.mp4'
+const heroImage = '/images/dashboard-hero.jpg'
 
 const monthlyOrders = computed(() => {
   const now = new Date()
@@ -61,18 +61,17 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <div class="relative overflow-hidden rounded-2xl bg-dark text-white">
-      <video
-        class="absolute inset-0 size-full object-cover opacity-30"
-        autoplay
-        muted
-        loop
-        playsinline
-        poster=""
-      >
-        <source :src="bgVideo" type="video/mp4" />
-      </video>
-      <div class="relative p-6 sm:p-8">
+    <div class="relative flex min-h-[220px] items-center overflow-hidden rounded-2xl bg-dark text-white sm:min-h-[280px]">
+      <!-- foto del lookbook: a tutta larghezza su mobile (scurita), a destra con sfumatura sul fondo scuro da tablet in su -->
+      <img
+        :src="heroImage"
+        alt=""
+        aria-hidden="true"
+        class="absolute inset-y-0 right-0 h-full w-full object-cover object-[center_18%] sm:w-[62%]"
+      />
+      <div class="absolute inset-0 bg-dark/60 sm:hidden"></div>
+      <div class="absolute inset-y-0 right-0 hidden w-[62%] bg-gradient-to-r from-dark via-dark/30 to-transparent sm:block"></div>
+      <div class="relative p-6 sm:p-10">
         <p class="text-sm text-white/70">Benvenuto</p>
         <h1 class="text-2xl font-bold tracking-tight">{{ auth.user?.nome || (isCliente ? 'Cliente' : 'Agente') }}</h1>
         <p v-if="!isCliente" class="mt-1 text-sm text-white/70">Codice agente {{ auth.user?.codice_agente }}</p>
